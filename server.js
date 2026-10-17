@@ -10,15 +10,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-initDatabase();
+await initDatabase();
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Database Health & Status Endpoint
-app.get('/api/health', (req, res) => {
-  const dbStatus = testConnection();
+app.get('/api/health', async (req, res) => {
+  const dbStatus = await testConnection();
   if (dbStatus.connected) {
     return res.json({ status: 'ok', database: dbStatus });
   } else {
@@ -27,7 +27,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication Middleware
-const authenticateSession = (req, res, next) => {
+const authenticateSession = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
@@ -36,7 +36,7 @@ const authenticateSession = (req, res, next) => {
   }
 
   try {
-    const session = db.prepare(`
+    const session = await db.prepare(`
       SELECT sessions.token, sessions.user_id, sessions.expires_at, users.name, users.email, users.role 
       FROM sessions 
       JOIN users ON sessions.user_id = users.id 
@@ -50,7 +50,7 @@ const authenticateSession = (req, res, next) => {
     // Check expiration
     if (new Date(session.expires_at) < new Date()) {
       // Clean up expired session
-      db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+      await db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
       return res.status(401).json({ error: 'Session expired.' });
     }
 
@@ -74,7 +74,7 @@ const authenticateSession = (req, res, next) => {
 // ----------------------------------------------------
 
 // Register a customer or service provider account.
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   const { name, email, password, role, category, bio, hourly_rate } = req.body;
 
   if (!name || !email || !password || !role) {
@@ -90,40 +90,40 @@ app.post('/api/auth/register', (req, res) => {
   }
 
   try {
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (existing) {
       return res.status(400).json({ error: 'Email already registered.' });
     }
 
     const { hash, salt } = hashPassword(password);
 
-    db.prepare('BEGIN TRANSACTION').run();
+    await db.prepare('BEGIN TRANSACTION').run();
 
     try {
-      db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
+      await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
         .run(name, email, hash, salt, role);
 
-      const newUserId = db.prepare('SELECT last_insert_rowid() as id').get().id;
+      const newUserId = (await db.prepare('SELECT last_insert_rowid() as id').get()).id;
 
       if (role === 'provider') {
         const rate = parseFloat(hourly_rate);
         if (!Number.isFinite(rate) || rate <= 0) {
-          db.prepare('ROLLBACK').run();
+          await db.prepare('ROLLBACK').run();
           return res.status(400).json({ error: 'Hourly rate must be a valid positive number.' });
         }
 
-        db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, status) VALUES (?, ?, ?, ?, ?)')
+        await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, status) VALUES (?, ?, ?, ?, ?)')
           .run(newUserId, category, bio || '', rate, 'pending_approval');
       }
 
-      db.prepare('COMMIT').run();
+      await db.prepare('COMMIT').run();
 
       return res.status(201).json({
         message: 'Registration successful.',
         user: { id: newUserId, name, email, role }
       });
     } catch (err) {
-      db.prepare('ROLLBACK').run();
+      await db.prepare('ROLLBACK').run();
       throw err;
     }
   } catch (error) {
@@ -133,7 +133,7 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 // Login
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -141,7 +141,7 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   try {
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
@@ -155,12 +155,12 @@ app.post('/api/auth/login', (req, res) => {
     const sessionToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
 
-    db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(sessionToken, user.id, expiresAt);
+    await db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(sessionToken, user.id, expiresAt);
 
     // Record login event in audit table
     try {
       const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO login_history (user_id, user_name, email, role, ip_address)
         VALUES (?, ?, ?, ?, ?)
       `).run(user.id, user.name, user.email, user.role, clientIp);
@@ -185,9 +185,9 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // Logout
-app.post('/api/auth/logout', authenticateSession, (req, res) => {
+app.post('/api/auth/logout', authenticateSession, async (req, res) => {
   try {
-    db.prepare('DELETE FROM sessions WHERE token = ?').run(req.user.token);
+    await db.prepare('DELETE FROM sessions WHERE token = ?').run(req.user.token);
     return res.json({ message: 'Logout successful.' });
   } catch (error) {
     console.error('Logout error:', error);
@@ -196,12 +196,12 @@ app.post('/api/auth/logout', authenticateSession, (req, res) => {
 });
 
 // Get Current User Profile
-app.get('/api/auth/me', authenticateSession, (req, res) => {
+app.get('/api/auth/me', authenticateSession, async (req, res) => {
   try {
     const userData = { ...req.user };
 
     if (userData.role === 'provider') {
-      const providerInfo = db.prepare(`
+      const providerInfo = await db.prepare(`
         SELECT category, bio, hourly_rate, rating, review_count, availability, status 
         FROM providers 
         WHERE user_id = ?
@@ -237,9 +237,9 @@ const categoryServices = {
 };
 
 // Get All Categories
-app.get('/api/categories', (req, res) => {
+app.get('/api/categories', async (req, res) => {
   try {
-    const categories = db.prepare('SELECT * FROM categories').all().map(category => ({
+    const categories = (await db.prepare('SELECT * FROM categories').all()).map(category => ({
       ...category,
       services: categoryServices[category.name] || []
     }));
@@ -256,7 +256,7 @@ app.get('/api/categories', (req, res) => {
 // ----------------------------------------------------
 
 // Get Active Providers (with filters)
-app.get('/api/providers', (req, res) => {
+app.get('/api/providers', async (req, res) => {
   const { category, search } = req.query;
 
   try {
@@ -279,7 +279,7 @@ app.get('/api/providers', (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    const providers = db.prepare(query).all(...params);
+    const providers = await db.prepare(query).all(...params);
     return res.json(providers);
   } catch (error) {
     console.error('Get providers error:', error);
@@ -288,11 +288,11 @@ app.get('/api/providers', (req, res) => {
 });
 
 // Get Specific Provider Profile & Reviews
-app.get('/api/providers/:id', (req, res) => {
+app.get('/api/providers/:id', async (req, res) => {
   const providerId = req.params.id;
 
   try {
-    const provider = db.prepare(`
+    const provider = await db.prepare(`
       SELECT users.id, users.name, users.email, providers.category, providers.bio, 
              providers.hourly_rate, providers.rating, providers.review_count, providers.availability, providers.status
       FROM providers
@@ -308,7 +308,7 @@ app.get('/api/providers/:id', (req, res) => {
     provider.availability = JSON.parse(provider.availability || '{}');
 
     // Fetch reviews
-    const reviews = db.prepare(`
+    const reviews = await db.prepare(`
       SELECT reviews.id, reviews.rating, reviews.comment, reviews.created_at, users.name as customer_name
       FROM reviews
       JOIN users ON reviews.customer_id = users.id
@@ -324,7 +324,7 @@ app.get('/api/providers/:id', (req, res) => {
 });
 
 // Update Provider Profile (Bio, Rate, Availability, Category)
-app.put('/api/providers/profile', authenticateSession, (req, res) => {
+app.put('/api/providers/profile', authenticateSession, async (req, res) => {
   if (req.user.role !== 'provider') {
     return res.status(403).json({ error: 'Only service providers can perform this action.' });
   }
@@ -338,7 +338,7 @@ app.put('/api/providers/profile', authenticateSession, (req, res) => {
   try {
     const availabilityString = availability ? JSON.stringify(availability) : '{"days":["Monday","Tuesday","Wednesday","Thursday","Friday"],"hours":{"start":"09:00","end":"17:00"}}';
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE providers 
       SET bio = ?, hourly_rate = ?, availability = ?, category = COALESCE(?, category) 
       WHERE user_id = ?
@@ -357,7 +357,7 @@ app.put('/api/providers/profile', authenticateSession, (req, res) => {
 // ----------------------------------------------------
 
 // Create a Booking
-app.post('/api/bookings', authenticateSession, (req, res) => {
+app.post('/api/bookings', authenticateSession, async (req, res) => {
   if (req.user.role !== 'customer') {
     return res.status(403).json({ error: 'Only customers can book services.' });
   }
@@ -370,7 +370,7 @@ app.post('/api/bookings', authenticateSession, (req, res) => {
 
   try {
     // Verify provider offers this category and get hourly rate
-    const provider = db.prepare(`
+    const provider = await db.prepare(`
       SELECT hourly_rate, status FROM providers WHERE user_id = ? AND category = ?
     `).get(provider_id, category);
 
@@ -385,12 +385,12 @@ app.post('/api/bookings', authenticateSession, (req, res) => {
     const duration = parseInt(duration_hours || 1);
     const totalPrice = provider.hourly_rate * duration;
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO bookings (customer_id, provider_id, category, booking_date, booking_time, duration_hours, address, total_price, notes, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
     `).run(req.user.id, provider_id, category, booking_date, booking_time, duration, address, totalPrice, notes || '');
 
-    const newBookingId = db.prepare('SELECT last_insert_rowid() as id').get().id;
+    const newBookingId = (await db.prepare('SELECT last_insert_rowid() as id').get()).id;
 
     return res.status(201).json({
       message: 'Booking created successfully.',
@@ -404,7 +404,7 @@ app.post('/api/bookings', authenticateSession, (req, res) => {
 });
 
 // Get Bookings (with optional date range filtering)
-app.get('/api/bookings', authenticateSession, (req, res) => {
+app.get('/api/bookings', authenticateSession, async (req, res) => {
   try {
     const { from_date, to_date } = req.query;
     let query = '';
@@ -473,7 +473,7 @@ app.get('/api/bookings', authenticateSession, (req, res) => {
       query += ` ORDER BY bookings.created_at DESC`;
     }
 
-    const bookings = db.prepare(query).all(...params);
+    const bookings = await db.prepare(query).all(...params);
     return res.json(bookings);
   } catch (error) {
     console.error('Fetch bookings error:', error);
@@ -482,7 +482,7 @@ app.get('/api/bookings', authenticateSession, (req, res) => {
 });
 
 // Dedicated Customer Expenditure Route by Date Range
-app.get('/api/customer/expenditure', authenticateSession, (req, res) => {
+app.get('/api/customer/expenditure', authenticateSession, async (req, res) => {
   if (req.user.role !== 'customer') {
     return res.status(403).json({ error: 'Only customers can access expenditure reports.' });
   }
@@ -510,7 +510,7 @@ app.get('/api/customer/expenditure', authenticateSession, (req, res) => {
 
     query += ` ORDER BY bookings.booking_date DESC`;
 
-    const paidBookings = db.prepare(query).all(...params);
+    const paidBookings = await db.prepare(query).all(...params);
 
     const totalSpent = paidBookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
     const count = paidBookings.length;
@@ -542,7 +542,7 @@ app.get('/api/customer/expenditure', authenticateSession, (req, res) => {
 });
 
 // Update Booking Status (Accept, Start, Complete, Cancel)
-app.put('/api/bookings/:id/status', authenticateSession, (req, res) => {
+app.put('/api/bookings/:id/status', authenticateSession, async (req, res) => {
   const bookingId = req.params.id;
   const { status } = req.body;
 
@@ -551,7 +551,7 @@ app.put('/api/bookings/:id/status', authenticateSession, (req, res) => {
   }
 
   try {
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
+    const booking = await db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
 
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found.' });
@@ -597,9 +597,9 @@ app.put('/api/bookings/:id/status', authenticateSession, (req, res) => {
 
     // Update status and provider_completed flag
     if (status === 'completed') {
-      db.prepare('UPDATE bookings SET status = ?, provider_completed = 1 WHERE id = ?').run(status, bookingId);
+      await db.prepare('UPDATE bookings SET status = ?, provider_completed = 1 WHERE id = ?').run(status, bookingId);
     } else {
-      db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, bookingId);
+      await db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, bookingId);
     }
     return res.json({ message: `Booking status updated to ${status}.` });
   } catch (error) {
@@ -614,7 +614,7 @@ app.put('/api/bookings/:id/status', authenticateSession, (req, res) => {
 // ----------------------------------------------------
 
 // Submit a Review
-app.post('/api/bookings/:id/review', authenticateSession, (req, res) => {
+app.post('/api/bookings/:id/review', authenticateSession, async (req, res) => {
   const bookingId = req.params.id;
   const { rating, comment } = req.body;
 
@@ -627,7 +627,7 @@ app.post('/api/bookings/:id/review', authenticateSession, (req, res) => {
   }
 
   try {
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
+    const booking = await db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
 
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found.' });
@@ -642,39 +642,39 @@ app.post('/api/bookings/:id/review', authenticateSession, (req, res) => {
     }
 
     // Check if review already exists
-    const existing = db.prepare('SELECT id FROM reviews WHERE booking_id = ?').get(bookingId);
+    const existing = await db.prepare('SELECT id FROM reviews WHERE booking_id = ?').get(bookingId);
     if (existing) {
       return res.status(400).json({ error: 'This booking has already been reviewed.' });
     }
 
     // Insert Review and Update Provider aggregate stats atomically
-    db.prepare('BEGIN TRANSACTION').run();
+    await db.prepare('BEGIN TRANSACTION').run();
     try {
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO reviews (booking_id, customer_id, provider_id, rating, comment)
         VALUES (?, ?, ?, ?, ?)
       `).run(bookingId, req.user.id, booking.provider_id, rating, comment || '');
 
-      db.prepare(`
+      await db.prepare(`
         UPDATE bookings SET status = 'completed' WHERE id = ?
       `).run(bookingId);
 
       // Fetch all reviews for this provider to recalculate average rating
-      const reviewStats = db.prepare(`
+      const reviewStats = await db.prepare(`
         SELECT COUNT(*) as count, AVG(rating) as avg_rating FROM reviews WHERE provider_id = ?
       `).get(booking.provider_id);
 
-      db.prepare(`
+      await db.prepare(`
         UPDATE providers 
         SET rating = ?, review_count = ? 
         WHERE user_id = ?
       `).run(parseFloat(reviewStats.avg_rating.toFixed(1)), reviewStats.count, booking.provider_id);
 
-      db.prepare('COMMIT').run();
+      await db.prepare('COMMIT').run();
 
       return res.status(201).json({ message: 'Review submitted successfully.' });
     } catch (err) {
-      db.prepare('ROLLBACK').run();
+      await db.prepare('ROLLBACK').run();
       throw err;
     }
   } catch (error) {
@@ -688,7 +688,7 @@ app.post('/api/bookings/:id/review', authenticateSession, (req, res) => {
 // ----------------------------------------------------
 
 // Submit a Customer Complaint
-app.post('/api/complaints', authenticateSession, (req, res) => {
+app.post('/api/complaints', authenticateSession, async (req, res) => {
   const { booking_id, subject, description, priority } = req.body;
 
   if (!booking_id || !subject || !description) {
@@ -700,7 +700,7 @@ app.post('/api/complaints', authenticateSession, (req, res) => {
   }
 
   try {
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
+    const booking = await db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
 
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found.' });
@@ -710,7 +710,7 @@ app.post('/api/complaints', authenticateSession, (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to raise complaint for this booking.' });
     }
 
-    db.prepare(`
+    await db.prepare(`
       INSERT INTO complaints (booking_id, customer_id, provider_id, subject, description, priority, status)
       VALUES (?, ?, ?, ?, ?, ?, 'Pending')
     `).run(booking_id, req.user.id, booking.provider_id, subject, description, priority || 'Medium');
@@ -723,11 +723,11 @@ app.post('/api/complaints', authenticateSession, (req, res) => {
 });
 
 // Get Complaints List
-app.get('/api/complaints', authenticateSession, (req, res) => {
+app.get('/api/complaints', authenticateSession, async (req, res) => {
   try {
     let complaints = [];
     if (req.user.role === 'customer') {
-      complaints = db.prepare(`
+      complaints = await db.prepare(`
         SELECT complaints.*, p.name as provider_name, bookings.category, bookings.booking_date
         FROM complaints
         JOIN users p ON complaints.provider_id = p.id
@@ -736,7 +736,7 @@ app.get('/api/complaints', authenticateSession, (req, res) => {
         ORDER BY complaints.created_at DESC
       `).all(req.user.id);
     } else if (req.user.role === 'admin') {
-      complaints = db.prepare(`
+      complaints = await db.prepare(`
         SELECT complaints.*, c.name as customer_name, p.name as provider_name, bookings.category, bookings.booking_date
         FROM complaints
         JOIN users c ON complaints.customer_id = c.id
@@ -745,7 +745,7 @@ app.get('/api/complaints', authenticateSession, (req, res) => {
         ORDER BY complaints.created_at DESC
       `).all();
     } else if (req.user.role === 'provider') {
-      complaints = db.prepare(`
+      complaints = await db.prepare(`
         SELECT complaints.*, c.name as customer_name, bookings.category, bookings.booking_date
         FROM complaints
         JOIN users c ON complaints.customer_id = c.id
@@ -763,7 +763,7 @@ app.get('/api/complaints', authenticateSession, (req, res) => {
 });
 
 // Admin Resolve / Update Complaint Status
-app.put('/api/admin/complaints/:id/resolve', authenticateSession, (req, res) => {
+app.put('/api/admin/complaints/:id/resolve', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied. Admins only.' });
   }
@@ -776,7 +776,7 @@ app.put('/api/admin/complaints/:id/resolve', authenticateSession, (req, res) => 
   }
 
   try {
-    db.prepare(`
+    await db.prepare(`
       UPDATE complaints 
       SET status = ?, resolution_notes = ? 
       WHERE id = ?
@@ -795,7 +795,7 @@ app.put('/api/admin/complaints/:id/resolve', authenticateSession, (req, res) => 
 // ----------------------------------------------------
 
 // Send Chat Message
-app.post('/api/messages', authenticateSession, (req, res) => {
+app.post('/api/messages', authenticateSession, async (req, res) => {
   const { booking_id, message } = req.body;
 
   if (!booking_id || !message) {
@@ -804,7 +804,7 @@ app.post('/api/messages', authenticateSession, (req, res) => {
 
   try {
     // Validate booking and fetch participants
-    const booking = db.prepare('SELECT customer_id, provider_id FROM bookings WHERE id = ?').get(booking_id);
+    const booking = await db.prepare('SELECT customer_id, provider_id FROM bookings WHERE id = ?').get(booking_id);
 
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found.' });
@@ -820,20 +820,20 @@ app.post('/api/messages', authenticateSession, (req, res) => {
       return res.status(403).json({ error: 'You are not authorized to participate in this chat.' });
     }
 
-    db.prepare(`
+    const msgInsert = await db.prepare(`
       INSERT INTO messages (sender_id, receiver_id, booking_id, message)
       VALUES (?, ?, ?, ?)
     `).run(req.user.id, receiverId, booking_id, message);
 
-    const newMessage = db.prepare(`
+    const newMessage = await db.prepare(`
       SELECT messages.*, users.name as sender_name 
       FROM messages
       JOIN users ON messages.sender_id = users.id
-      WHERE messages.id = last_insert_rowid()
-    `).get();
+      WHERE messages.id = ?
+    `).get(msgInsert.lastInsertRowid);
 
     // Setup a simulated response for demonstration purposes
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         let senderIdSimulated = receiverId;
         let receiverIdSimulated = req.user.id;
@@ -857,7 +857,7 @@ app.post('/api/messages', authenticateSession, (req, res) => {
 
         const randomMsg = replies[Math.floor(Math.random() * replies.length)];
 
-        db.prepare(`
+        await db.prepare(`
           INSERT INTO messages (sender_id, receiver_id, booking_id, message)
           VALUES (?, ?, ?, ?)
         `).run(senderIdSimulated, receiverIdSimulated, booking_id, randomMsg);
@@ -874,11 +874,11 @@ app.post('/api/messages', authenticateSession, (req, res) => {
 });
 
 // Retrieve Chat History for Booking
-app.get('/api/messages/:bookingId', authenticateSession, (req, res) => {
+app.get('/api/messages/:bookingId', authenticateSession, async (req, res) => {
   const bookingId = req.params.bookingId;
 
   try {
-    const booking = db.prepare('SELECT customer_id, provider_id FROM bookings WHERE id = ?').get(bookingId);
+    const booking = await db.prepare('SELECT customer_id, provider_id FROM bookings WHERE id = ?').get(bookingId);
 
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found.' });
@@ -890,10 +890,10 @@ app.get('/api/messages/:bookingId', authenticateSession, (req, res) => {
     }
 
     // Mark messages sent to current user as read
-    db.prepare('UPDATE messages SET is_read = 1 WHERE booking_id = ? AND receiver_id = ?').run(bookingId, req.user.id);
+    await db.prepare('UPDATE messages SET is_read = 1 WHERE booking_id = ? AND receiver_id = ?').run(bookingId, req.user.id);
 
     // Retrieve chat log
-    const chatLog = db.prepare(`
+    const chatLog = await db.prepare(`
       SELECT messages.*, users.name as sender_name
       FROM messages
       JOIN users ON messages.sender_id = users.id
@@ -914,7 +914,7 @@ app.get('/api/messages/:bookingId', authenticateSession, (req, res) => {
 // ----------------------------------------------------
 
 // Admin Approve & Allocate Provider to Customer Request
-app.put('/api/admin/bookings/:id/allocate', authenticateSession, (req, res) => {
+app.put('/api/admin/bookings/:id/allocate', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied. Admins only.' });
   }
@@ -927,7 +927,7 @@ app.put('/api/admin/bookings/:id/allocate', authenticateSession, (req, res) => {
   }
 
   try {
-    const provider = db.prepare(`
+    const provider = await db.prepare(`
       SELECT user_id, category, hourly_rate FROM providers WHERE user_id = ?
     `).get(provider_id);
 
@@ -935,7 +935,7 @@ app.put('/api/admin/bookings/:id/allocate', authenticateSession, (req, res) => {
       return res.status(404).json({ error: 'Selected provider not found.' });
     }
 
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
+    const booking = await db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
     if (!booking) {
       return res.status(404).json({ error: 'Booking request not found.' });
     }
@@ -945,7 +945,7 @@ app.put('/api/admin/bookings/:id/allocate', authenticateSession, (req, res) => {
     const adminMargin = totalPrice * 0.20; // 20% Admin Platform Revenue
     const providerPayout = totalPrice * 0.80; // 80% Net Provider Payout
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE bookings 
       SET provider_id = ?, admin_approved = 1, status = 'accepted', total_price = ?, admin_margin = ?, provider_payout = ?
       WHERE id = ?
@@ -963,18 +963,18 @@ app.put('/api/admin/bookings/:id/allocate', authenticateSession, (req, res) => {
 });
 
 // Customer Pay to Admin Escrow
-app.post('/api/bookings/:id/pay-admin', authenticateSession, (req, res) => {
+app.post('/api/bookings/:id/pay-admin', authenticateSession, async (req, res) => {
   const bookingId = req.params.id;
 
   try {
-    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
+    const booking = await db.prepare('SELECT * FROM bookings WHERE id = ?').get(bookingId);
     if (!booking) return res.status(404).json({ error: 'Booking not found.' });
 
     const totalPrice = booking.total_price || 100;
     const adminMargin = totalPrice * 0.20;
     const providerPayout = totalPrice * 0.80;
 
-    db.prepare(`
+    await db.prepare(`
       UPDATE bookings 
       SET payment_status = 'paid_to_admin', admin_margin = ?, provider_payout = ?
       WHERE id = ?
@@ -993,7 +993,7 @@ app.post('/api/bookings/:id/pay-admin', authenticateSession, (req, res) => {
 });
 
 // Admin Disburse Payment to Provider
-app.put('/api/admin/bookings/:id/disburse', authenticateSession, (req, res) => {
+app.put('/api/admin/bookings/:id/disburse', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied. Admins only.' });
   }
@@ -1001,7 +1001,7 @@ app.put('/api/admin/bookings/:id/disburse', authenticateSession, (req, res) => {
   const bookingId = req.params.id;
 
   try {
-    db.prepare(`
+    await db.prepare(`
       UPDATE bookings SET payout_status = 'disbursed' WHERE id = ?
     `).run(bookingId);
 
@@ -1013,7 +1013,7 @@ app.put('/api/admin/bookings/:id/disburse', authenticateSession, (req, res) => {
 });
 
 // Admin Confirm Provider Work Completion & Authorize Customer Rating
-app.put('/api/admin/bookings/:id/confirm-completion', authenticateSession, (req, res) => {
+app.put('/api/admin/bookings/:id/confirm-completion', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied. Admins only.' });
   }
@@ -1021,7 +1021,7 @@ app.put('/api/admin/bookings/:id/confirm-completion', authenticateSession, (req,
   const bookingId = req.params.id;
 
   try {
-    db.prepare(`
+    await db.prepare(`
       UPDATE bookings 
       SET admin_completion_confirmed = 1, status = 'completed' 
       WHERE id = ?
@@ -1035,34 +1035,34 @@ app.put('/api/admin/bookings/:id/confirm-completion', authenticateSession, (req,
 });
 
 // Admin Dashboard stats & Financial Ledger
-app.get('/api/admin/stats', authenticateSession, (req, res) => {
+app.get('/api/admin/stats', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied. Admins only.' });
   }
 
   try {
-    const totalUsers = db.prepare("SELECT COUNT(*) as count FROM users WHERE role != 'admin'").get().count;
-    const totalProviders = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'provider'").get().count;
-    const totalBookings = db.prepare('SELECT COUNT(*) as count FROM bookings').get().count;
+    const totalUsers = (await db.prepare("SELECT COUNT(*) as count FROM users WHERE role != 'admin'").get()).count;
+    const totalProviders = (await db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'provider'").get()).count;
+    const totalBookings = (await db.prepare('SELECT COUNT(*) as count FROM bookings').get()).count;
 
-    const earningsRes = db.prepare("SELECT SUM(total_price) as sum FROM bookings WHERE status = 'completed' OR payment_status = 'paid_to_admin'").get();
+    const earningsRes = await db.prepare("SELECT SUM(total_price) as sum FROM bookings WHERE status = 'completed' OR payment_status = 'paid_to_admin'").get();
     const totalEarnings = earningsRes.sum || 0;
 
-    const profitRes = db.prepare("SELECT SUM(admin_margin) as sum FROM bookings WHERE payment_status = 'paid_to_admin' OR status = 'completed'").get();
+    const profitRes = await db.prepare("SELECT SUM(admin_margin) as sum FROM bookings WHERE payment_status = 'paid_to_admin' OR status = 'completed'").get();
     const totalAdminProfit = profitRes.sum || (totalEarnings * 0.20);
 
-    const disbursedRes = db.prepare("SELECT SUM(provider_payout) as sum FROM bookings WHERE payout_status = 'disbursed'").get();
+    const disbursedRes = await db.prepare("SELECT SUM(provider_payout) as sum FROM bookings WHERE payout_status = 'disbursed'").get();
     const totalDisbursedToProviders = disbursedRes.sum || 0;
 
-    const bookingsByStatus = db.prepare(`
+    const bookingsByStatus = await db.prepare(`
       SELECT status, COUNT(*) as count FROM bookings GROUP BY status
     `).all();
 
-    const categoryPopularity = db.prepare(`
+    const categoryPopularity = await db.prepare(`
       SELECT category, COUNT(*) as count FROM bookings GROUP BY category ORDER BY count DESC
     `).all();
 
-    const allBookings = db.prepare(`
+    const allBookings = await db.prepare(`
       SELECT bookings.*, c.name as customer_name, p.name as provider_name
       FROM bookings
       JOIN users c ON bookings.customer_id = c.id
@@ -1070,18 +1070,18 @@ app.get('/api/admin/stats', authenticateSession, (req, res) => {
       ORDER BY bookings.created_at DESC
     `).all();
 
-    const approvedProviders = db.prepare(`
+    const approvedProviders = await db.prepare(`
       SELECT users.id, users.name, providers.category, providers.hourly_rate
       FROM users
       JOIN providers ON users.id = providers.user_id
       WHERE providers.status = 'approved'
     `).all();
 
-    const loginHistory = db.prepare(`
+    const loginHistory = await db.prepare(`
       SELECT * FROM login_history ORDER BY id DESC LIMIT 50
     `).all();
 
-    const allReviews = db.prepare(`
+    const allReviews = await db.prepare(`
       SELECT reviews.*, c.name as customer_name, p.name as provider_name, bookings.category, bookings.booking_date
       FROM reviews
       JOIN users c ON reviews.customer_id = c.id
@@ -1090,7 +1090,7 @@ app.get('/api/admin/stats', authenticateSession, (req, res) => {
       ORDER BY reviews.created_at DESC
     `).all();
 
-    const allComplaints = db.prepare(`
+    const allComplaints = await db.prepare(`
       SELECT complaints.*, c.name as customer_name, p.name as provider_name, bookings.category, bookings.booking_date
       FROM complaints
       JOIN users c ON complaints.customer_id = c.id
@@ -1123,13 +1123,13 @@ app.get('/api/admin/stats', authenticateSession, (req, res) => {
 });
 
 // Admin Users List
-app.get('/api/admin/users', authenticateSession, (req, res) => {
+app.get('/api/admin/users', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied.' });
   }
 
   try {
-    const users = db.prepare(`
+    const users = await db.prepare(`
       SELECT users.id, users.name, users.email, users.role, users.created_at,
              providers.category, providers.hourly_rate, providers.status as provider_status
       FROM users
@@ -1146,7 +1146,7 @@ app.get('/api/admin/users', authenticateSession, (req, res) => {
 });
 
 // Admin Toggle User/Provider Block status
-app.put('/api/admin/users/:id/status', authenticateSession, (req, res) => {
+app.put('/api/admin/users/:id/status', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied.' });
   }
@@ -1159,12 +1159,12 @@ app.put('/api/admin/users/:id/status', authenticateSession, (req, res) => {
   }
 
   try {
-    const provider = db.prepare('SELECT * FROM providers WHERE user_id = ?').get(userId);
+    const provider = await db.prepare('SELECT * FROM providers WHERE user_id = ?').get(userId);
     if (!provider) {
       return res.status(404).json({ error: 'Provider not found.' });
     }
 
-    db.prepare('UPDATE providers SET status = ? WHERE user_id = ?').run(status, userId);
+    await db.prepare('UPDATE providers SET status = ? WHERE user_id = ?').run(status, userId);
     return res.json({ message: 'Provider status updated successfully.' });
   } catch (error) {
     console.error('Admin toggle status error:', error);
@@ -1173,7 +1173,7 @@ app.put('/api/admin/users/:id/status', authenticateSession, (req, res) => {
 });
 
 // Admin Manage Categories (Create, Update, Delete)
-app.post('/api/admin/categories', authenticateSession, (req, res) => {
+app.post('/api/admin/categories', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied.' });
   }
@@ -1184,7 +1184,7 @@ app.post('/api/admin/categories', authenticateSession, (req, res) => {
   }
 
   try {
-    db.prepare('INSERT INTO categories (name, icon, description) VALUES (?, ?, ?)')
+    await db.prepare('INSERT INTO categories (name, icon, description) VALUES (?, ?, ?)')
       .run(name, icon, description || '');
     return res.status(201).json({ message: 'Category created successfully.' });
   } catch (error) {
@@ -1193,7 +1193,7 @@ app.post('/api/admin/categories', authenticateSession, (req, res) => {
   }
 });
 
-app.delete('/api/admin/categories/:id', authenticateSession, (req, res) => {
+app.delete('/api/admin/categories/:id', authenticateSession, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied.' });
   }
@@ -1201,7 +1201,7 @@ app.delete('/api/admin/categories/:id', authenticateSession, (req, res) => {
   const categoryId = req.params.id;
 
   try {
-    db.prepare('DELETE FROM categories WHERE id = ?').run(categoryId);
+    await db.prepare('DELETE FROM categories WHERE id = ?').run(categoryId);
     return res.json({ message: 'Category deleted successfully.' });
   } catch (error) {
     console.error('Admin delete category error:', error);
@@ -1213,7 +1213,7 @@ app.delete('/api/admin/categories/:id', authenticateSession, (req, res) => {
 // ----------------------------------------------------
 // SINGLE PAGE APPLICATION SPA ROUTING FALLBACK
 // ----------------------------------------------------
-app.get('*', (req, res) => {
+app.get('*', async (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
