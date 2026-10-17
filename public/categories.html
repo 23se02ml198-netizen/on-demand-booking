@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explore Categories | ApexServices</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheets -->
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 100vh;
+    }
+    .categories-hero {
+      text-align: center;
+      padding: 60px 0 30px 0;
+    }
+    .categories-hero h1 {
+      font-size: 38px;
+      margin-bottom: 14px;
+    }
+    .categories-hero p {
+      color: var(--text-muted);
+      font-size: 17px;
+      max-width: 680px;
+      margin: 0 auto 28px auto;
+      line-height: 1.6;
+    }
+    .cat-detail-card {
+      background: var(--bg-card-glass);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--border-glass);
+      border-radius: 18px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: var(--transition-normal);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    .cat-detail-card:hover {
+      border-color: var(--border-glass-hover);
+      box-shadow: 0 16px 45px rgba(56, 189, 248, 0.18);
+      transform: translateY(-5px);
+    }
+    .cat-icon-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    .cat-service-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 24px 0;
+    }
+    .cat-service-tag {
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-glass);
+      color: var(--text-light);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Navigation -->
+  <header class="main-header">
+    <div class="header-content container">
+      <a href="/" class="logo-container">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="logo-text">Apex<span class="highlight">Services</span></span>
+      </a>
+
+      <nav class="navbar">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/#services" class="nav-link">Services</a>
+        <a href="/categories.html" class="nav-link active">Categories</a>
+        <a href="/about.html" class="nav-link">About</a>
+      </nav>
+
+      <div style="display:flex; align-items:center;">
+        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Toggle Light/Dark Theme" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-glass); color:var(--text-white); width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; margin-right:10px;">🌙</button>
+        <a href="/login.html" class="btn btn-outline btn-sm">Sign In</a>
+        <a href="/register.html" class="btn btn-primary btn-sm" style="margin-left: 10px;">Register</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Categories Hero & Page Content -->
+  <main class="container animate-up">
+    <section class="categories-hero">
+      <p class="hero-kicker" style="display: inline-block; padding: 6px 18px; background: rgba(56, 189, 248, 0.14); color: var(--primary); border-radius: 30px; font-weight: 600; font-size: 13px; margin-bottom: 16px; border: 1px solid rgba(56, 189, 248, 0.28);">Service Directory</p>
+      <h1>Explore Service Categories</h1>
+      <p>Browse our complete index of home repair, cleaning, maintenance, beauty, and pest management categories with verified local specialists.</p>
+
+      <!-- Category Filter Search -->
+      <div style="max-width: 500px; margin: 0 auto 40px auto;">
+        <input type="text" id="cat-search-input" placeholder="Search categories (e.g. Plumbing, Cleaning)..." style="width: 100%; padding: 14px 20px; border-radius: 30px; border: 1px solid var(--border-glass); background: var(--bg-card-glass); color: var(--text-white); font-size: 15px; outline: none; box-shadow: 0 8px 25px rgba(0,0,0,0.2);">
+      </div>
+    </section>
+
+    <!-- Categories Grid -->
+    <section style="margin-bottom: 60px;">
+      <div id="categories-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 28px;">
+        
+        <!-- Plumbing Card -->
+        <article class="cat-detail-card" data-title="plumbing pipe leakage tap drain water heater">
+          <div>
+            <div class="cat-icon-badge">🔧</div>
+            <h2 style="font-size: 22px; margin-bottom: 8px; color: var(--text-white);">Plumbing & Pipe Repair</h2>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Fix pipe leakages, faucet replacements, blocked drain cleaning, geyser installation, and bathroom fittings with licensed plumbers.</p>
+            <div class="cat-service-tags">
+              <span class="cat-service-tag">Tap & Faucet Repair</span>
+              <span class="cat-service-tag">Pipe Leakage Repair</span>
+              <span class="cat-service-tag">Drain Unclogging</span>
+              <span class="cat-service-tag">Water Heater Service</span>
+              <span class="cat-service-tag">Tank & Pump Repair</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 18px; border-top: 1px solid var(--border-glass); margin-top: 12px;">
+            <div>
+              <span style="font-size: 12px; color: var(--text-muted);">Starting at</span>
+              <div style="font-weight: 700; color: var(--primary); font-size: 18px;">₹350 / hr</div>
+            </div>
+            <a href="/#services?category=Plumbing" class="btn btn-primary btn-sm">Find Plumbers &rarr;</a>
+          </div>
+        </article>
+
+        <!-- Cleaning Card -->
+        <article class="cat-detail-card" data-title="cleaning home deep kitchen bathroom sofa carpet tank">
+          <div>
+            <div class="cat-icon-badge">🧹</div>
+            <h2 style="font-size: 22px; margin-bottom: 8px; color: var(--text-white);">Home Deep Cleaning</h2>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Comprehensive deep cleaning for living rooms, kitchens, bathrooms, sofas, carpets, and water tanks using eco-friendly products.</p>
+            <div class="cat-service-tags">
+              <span class="cat-service-tag">Full Home Deep Cleaning</span>
+              <span class="cat-service-tag">Kitchen Degreasing</span>
+              <span class="cat-service-tag">Bathroom Sanitization</span>
+              <span class="cat-service-tag">Sofa & Carpet Shampoo</span>
+              <span class="cat-service-tag">Water Tank Cleaning</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 18px; border-top: 1px solid var(--border-glass); margin-top: 12px;">
+            <div>
+              <span style="font-size: 12px; color: var(--text-muted);">Starting at</span>
+              <div style="font-weight: 700; color: var(--primary); font-size: 18px;">₹290 / hr</div>
+            </div>
+            <a href="/#services?category=Cleaning" class="btn btn-primary btn-sm">Find Cleaners &rarr;</a>
+          </div>
+        </article>
+
+        <!-- Electrical Card -->
+        <article class="cat-detail-card" data-title="electrical switch fan light wiring inverter cctv fuse">
+          <div>
+            <div class="cat-icon-badge">⚡</div>
+            <h2 style="font-size: 22px; margin-bottom: 8px; color: var(--text-white);">Electrical & Wiring</h2>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Certified electricians for switchboard repairs, ceiling fan installations, LED lighting, short circuit fixes, and CCTV setups.</p>
+            <div class="cat-service-tags">
+              <span class="cat-service-tag">Switch & Socket Repair</span>
+              <span class="cat-service-tag">Fan & Light Fitting</span>
+              <span class="cat-service-tag">Short Circuit Repair</span>
+              <span class="cat-service-tag">Inverter & Battery</span>
+              <span class="cat-service-tag">CCTV Installation</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 18px; border-top: 1px solid var(--border-glass); margin-top: 12px;">
+            <div>
+              <span style="font-size: 12px; color: var(--text-muted);">Starting at</span>
+              <div style="font-weight: 700; color: var(--primary); font-size: 18px;">₹300 / hr</div>
+            </div>
+            <a href="/#services?category=Electrical" class="btn btn-primary btn-sm">Find Electricians &rarr;</a>
+          </div>
+        </article>
+
+        <!-- Appliance Repair Card -->
+        <article class="cat-detail-card" data-title="appliance repair ac refrigerator fridge washing machine microwave tv geyser">
+          <div>
+            <div class="cat-icon-badge">❄️</div>
+            <h2 style="font-size: 22px; margin-bottom: 8px; color: var(--text-white);">Appliance Repair & Service</h2>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Expert repair for split & window ACs, refrigerators, front/top load washing machines, microwave ovens, and Smart TVs.</p>
+            <div class="cat-service-tags">
+              <span class="cat-service-tag">AC Gas Refill & Cleaning</span>
+              <span class="cat-service-tag">Refrigerator Repair</span>
+              <span class="cat-service-tag">Washing Machine Fix</span>
+              <span class="cat-service-tag">Microwave Repair</span>
+              <span class="cat-service-tag">TV Panel Repair</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 18px; border-top: 1px solid var(--border-glass); margin-top: 12px;">
+            <div>
+              <span style="font-size: 12px; color: var(--text-muted);">Starting at</span>
+              <div style="font-weight: 700; color: var(--primary); font-size: 18px;">₹400 / hr</div>
+            </div>
+            <a href="/#services?category=Appliance%20Repair" class="btn btn-primary btn-sm">Find Technicians &rarr;</a>
+          </div>
+        </article>
+
+        <!-- Beauty & Wellness Card -->
+        <article class="cat-detail-card" data-title="beauty wellness haircut salon makeup facial manicure massage mehendi">
+          <div>
+            <div class="cat-icon-badge">💄</div>
+            <h2 style="font-size: 22px; margin-bottom: 8px; color: var(--text-white);">Beauty & Home Salon</h2>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Professional salon and wellness services delivered at your doorstep, including haircuts, bridal makeup, facials, and massages.</p>
+            <div class="cat-service-tags">
+              <span class="cat-service-tag">Haircut & Styling</span>
+              <span class="cat-service-tag">Bridal & Party Makeup</span>
+              <span class="cat-service-tag">Facials & Cleanup</span>
+              <span class="cat-service-tag">Manicure & Pedicure</span>
+              <span class="cat-service-tag">Relaxation Massage</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 18px; border-top: 1px solid var(--border-glass); margin-top: 12px;">
+            <div>
+              <span style="font-size: 12px; color: var(--text-muted);">Starting at</span>
+              <div style="font-weight: 700; color: var(--primary); font-size: 18px;">₹450 / hr</div>
+            </div>
+            <a href="/#services?category=Beauty%20%26%20Wellness" class="btn btn-primary btn-sm">Find Beauticians &rarr;</a>
+          </div>
+        </article>
+
+        <!-- Pest Control Card -->
+        <article class="cat-detail-card" data-title="pest control termite cockroach mosquito bed bug rodent inspection">
+          <div>
+            <div class="cat-icon-badge">🐜</div>
+            <h2 style="font-size: 22px; margin-bottom: 8px; color: var(--text-white);">Pest Control & Eradication</h2>
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">Safe and odorless pest control treatments for termites, cockroaches, mosquitoes, bed bugs, and rodents with warranty protection.</p>
+            <div class="cat-service-tags">
+              <span class="cat-service-tag">Anti-Termite Treatment</span>
+              <span class="cat-service-tag">Cockroach Gel Control</span>
+              <span class="cat-service-tag">Mosquito Fogging</span>
+              <span class="cat-service-tag">Bed Bug Eradication</span>
+              <span class="cat-service-tag">Rodent Trapping</span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 18px; border-top: 1px solid var(--border-glass); margin-top: 12px;">
+            <div>
+              <span style="font-size: 12px; color: var(--text-muted);">Starting at</span>
+              <div style="font-weight: 700; color: var(--primary); font-size: 18px;">₹380 / hr</div>
+            </div>
+            <a href="/#services?category=Pest%20Control" class="btn btn-primary btn-sm">Find Exterminators &rarr;</a>
+          </div>
+        </article>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="main-footer" style="padding: 28px 0; margin-top: 40px;">
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <span class="logo-text" style="font-size: 18px;">Apex<span class="highlight">Services</span></span>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">On-Demand Service Booking and Management System</p>
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted);">
+        &copy; 2026 ApexServices. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Theme & Search Logic Script -->
+  <script>
+    // Theme toggle
+    const savedTheme = localStorage.getItem('theme_mode') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    const toggleBtn = document.getElementById('theme-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+      toggleBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme_mode', next);
+        toggleBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+      });
+    }
+
+    // Category live search
+    const searchInput = document.getElementById('cat-search-input');
+    const cards = document.querySelectorAll('.cat-detail-card');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        cards.forEach(card => {
+          const text = card.getAttribute('data-title').toLowerCase();
+          if (!q || text.includes(q)) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>

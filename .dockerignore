@@ -1,0 +1,10 @@
+node_modules
+*.db
+*.db-journal
+services.db
+on_demand_service.db
+.git
+.vscode
+scratch
+.env
+.env.local

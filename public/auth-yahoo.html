@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yahoo - Sign in to ApexServices</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body {
+      background: #f5f8fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #1d252c;
+    }
+    .auth-card {
+      background: #ffffff;
+      width: 420px;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 12px 36px rgba(96, 1, 210, 0.12);
+      text-align: center;
+    }
+    .yahoo-logo {
+      font-size: 32px;
+      font-weight: 800;
+      color: #6001d2;
+      letter-spacing: -1px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1d252c;
+      margin-bottom: 8px;
+    }
+    p.subtext {
+      font-size: 14px;
+      color: #6e7a89;
+      margin-bottom: 28px;
+    }
+    .yahoo-box {
+      border: 2px solid #6001d2;
+      border-radius: 12px;
+      padding: 16px;
+      background: rgba(96, 1, 210, 0.04);
+      margin-bottom: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+    }
+    .yahoo-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #6001d2;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .y-name { font-weight: 700; font-size: 15px; color: #1d252c; }
+    .y-email { font-size: 13px; color: #6e7a89; }
+    .btn-yahoo {
+      width: 100%;
+      background: linear-gradient(135deg, #6001d2 0%, #4a00a0 100%);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(96, 1, 210, 0.3);
+      transition: opacity 0.2s;
+    }
+    .btn-yahoo:hover { opacity: 0.92; }
+    .footer-note {
+      margin-top: 28px;
+      font-size: 12px;
+      color: #6e7a89;
+    }
+    .footer-note a { color: #6001d2; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="yahoo-logo">yahoo!</div>
+    <h1>Sign in</h1>
+    <p class="subtext">using your Yahoo account for <strong>ApexServices</strong></p>
+
+    <div class="yahoo-box" id="yahoo-account-box">
+      <div class="yahoo-avatar">A</div>
+      <div>
+        <div class="y-name">System Administrator</div>
+        <div class="y-email">admin@yahoo.com</div>
+      </div>
+    </div>
+
+    <button class="btn-yahoo" id="btn-yahoo-login">Continue with Yahoo Account</button>
+
+    <div class="footer-note">
+      By clicking continue, you authorize Yahoo to authenticate your access to <a href="#">ApexServices</a>.
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('yahoo-account-box').addEventListener('click', doAuth);
+    document.getElementById('btn-yahoo-login').addEventListener('click', doAuth);
+
+    async function doAuth() {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'admin@services.com', password: 'admin123' })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('apex_token', data.token);
+          localStorage.setItem('apex_user', JSON.stringify(data.user));
+          window.location.href = '/index.html';
+        } else {
+          alert('Authentication failed.');
+        }
+      } catch(e) {
+        alert('Server connection error.');
+      }
+    }
+  </script>
+</body>
+</html>

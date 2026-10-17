@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account | ApexServices</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheets -->
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 100vh;
+    }
+    .auth-page-container {
+      max-width: 520px;
+      width: 100%;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .auth-card {
+      background: var(--bg-card-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass-hover);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+    .auth-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .auth-header .logo-container {
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .auth-header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .auth-header p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .auth-footer-link {
+      text-align: center;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-glass);
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .auth-footer-link a {
+      font-weight: 600;
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Navigation -->
+  <header class="main-header">
+    <div class="header-content container">
+      <a href="/" class="logo-container">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <span class="logo-text">Apex<span class="highlight">Services</span></span>
+      </a>
+      <div style="display:flex; align-items:center;">
+        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Toggle Light/Dark Theme" style="background:rgba(255,255,255,0.08); border:1px solid var(--border-glass); color:var(--text-white); width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; margin-right:10px;">🌙</button>
+        <a href="/" class="btn btn-outline btn-sm">&larr; Back to Home</a>
+        <a href="/login.html" class="btn btn-primary btn-sm" style="margin-left: 10px;">Sign In</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Standalone Register Card -->
+  <main class="auth-page-container animate-up">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="logo-container">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:44px; height:44px;">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <h1>Create Account</h1>
+        <p>Register as a Customer, Service Provider, or Administrator</p>
+      </div>
+
+      <!-- Toast Alert -->
+      <div id="alert-box" style="display:none; padding:12px 16px; border-radius:8px; margin-bottom:20px; font-size:14px;"></div>
+
+      <form id="standalone-register-form">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="reg-name" required placeholder="John Doe">
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="reg-email" required placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="reg-password" required placeholder="At least 6 characters">
+        </div>
+        
+        <div class="form-group">
+          <label>Select Account Role</label>
+          <select id="reg-role" required>
+            <option value="customer">Customer (Looking for services)</option>
+            <option value="provider">Service Provider (Offering skills)</option>
+            <option value="admin">Administrator (Manage Platform)</option>
+          </select>
+        </div>
+
+        <!-- Service Provider Extra Fields -->
+        <div id="provider-fields" class="hidden">
+          <div class="form-group">
+            <label>Select Service Category</label>
+            <select id="reg-cat">
+              <option value="Cleaning">Cleaning</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Appliance Repair">Appliance Repair</option>
+              <option value="Beauty & Wellness">Beauty & Wellness</option>
+              <option value="Pest Control">Pest Control</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Hourly Rate (₹)</label>
+            <input type="number" id="reg-rate" placeholder="e.g. 500" min="100">
+          </div>
+          <div class="form-group">
+            <label>Bio / Experience</label>
+            <textarea id="reg-bio" rows="2" placeholder="Briefly describe your skill and work history..."></textarea>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" type="submit" style="width: 100%; margin-top: 12px; padding: 14px; font-size: 15px;">Create Account</button>
+      </form>
+
+      <!-- Social Register Options -->
+      <div class="social-divider" style="display:flex; align-items:center; margin:24px 0 20px 0; color:var(--text-muted); font-size:13px;">
+        <div style="flex:1; border-bottom:1px solid var(--border-glass);"></div>
+        <span style="padding:0 12px;">Or sign up with</span>
+        <div style="flex:1; border-bottom:1px solid var(--border-glass);"></div>
+      </div>
+
+      <div class="social-actions" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+        <button type="button" class="social-btn" id="btn-reg-google" style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 20px; border-radius: 12px; border: 1px solid #e5e7eb; background: #ffffff; color: #1f2937; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.12);">
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span style="color:#1f2937; font-weight:600;">Continue with Google</span>
+        </button>
+
+        <button type="button" class="social-btn" id="btn-reg-microsoft" style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 20px; border-radius: 12px; border: 1px solid #444444; background: #2f2f2f; color: #ffffff; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
+          <svg width="22" height="22" viewBox="0 0 23 23">
+            <path fill="#f35325" d="M1 1h10v10H1z"/>
+            <path fill="#81bc06" d="M12 1h10v10H1z"/>
+            <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+            <path fill="#ffba08" d="M12 12h10v10H1z"/>
+          </svg>
+          <span style="color:#ffffff; font-weight:600;">Continue with Microsoft</span>
+        </button>
+
+        <button type="button" class="social-btn" id="btn-reg-yahoo" style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 20px; border-radius: 12px; border: 1px solid #7b1fa2; background: linear-gradient(135deg, #6001d2 0%, #4a00a0 100%); color: #ffffff; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(96,1,210,0.35);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff">
+            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1.5 6h3l-3.5 6.5V18h-2v-5.5L4.5 6h3l2 4.5L10.5 6z"/>
+          </svg>
+          <span style="color:#ffffff; font-weight:600;">Continue with Yahoo</span>
+        </button>
+      </div>
+
+      <div class="auth-footer-link">
+        Already have an account? <a href="/login.html">Sign in here</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="main-footer" style="padding: 24px 0; margin-top: 40px;">
+    <div class="container" style="text-align: center; color: var(--text-muted); font-size: 13px;">
+      &copy; 2026 ApexServices Inc. All rights reserved.
+    </div>
+  </footer>
+
+  <!-- Register Logic Script -->
+  <script>
+    const savedTheme = localStorage.getItem('theme_mode') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    const toggleBtn = document.getElementById('theme-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+      toggleBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme_mode', next);
+        toggleBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+      });
+    }
+
+    const form = document.getElementById('standalone-register-form');
+    const roleSelect = document.getElementById('reg-role');
+    const providerFields = document.getElementById('provider-fields');
+    const alertBox = document.getElementById('alert-box');
+
+    // Social Provider Page Redirects
+    const googleRegBtn = document.getElementById('btn-reg-google');
+    const msRegBtn = document.getElementById('btn-reg-microsoft');
+    const yahooRegBtn = document.getElementById('btn-reg-yahoo');
+
+    if (googleRegBtn) googleRegBtn.addEventListener('click', () => window.location.href = '/auth-google.html');
+    if (msRegBtn) msRegBtn.addEventListener('click', () => window.location.href = '/auth-microsoft.html');
+    if (yahooRegBtn) yahooRegBtn.addEventListener('click', () => window.location.href = '/auth-yahoo.html');
+
+    function showAlert(msg, isSuccess = false) {
+      alertBox.style.display = 'block';
+      alertBox.style.background = isSuccess ? 'rgba(46, 196, 182, 0.15)' : 'rgba(230, 57, 70, 0.15)';
+      alertBox.style.color = isSuccess ? 'var(--success)' : 'var(--danger)';
+      alertBox.style.border = `1px solid ${isSuccess ? 'var(--success)' : 'var(--danger)'}`;
+      alertBox.textContent = msg;
+    }
+
+    roleSelect.addEventListener('change', () => {
+      if (roleSelect.value === 'provider') {
+        providerFields.classList.remove('hidden');
+        document.getElementById('reg-rate').setAttribute('required', 'true');
+      } else {
+        providerFields.classList.add('hidden');
+        document.getElementById('reg-rate').removeAttribute('required');
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const role = roleSelect.value;
+
+      const payload = { name, email, password, role };
+
+      if (role === 'provider') {
+        payload.category = document.getElementById('reg-cat').value;
+        payload.hourly_rate = document.getElementById('reg-rate').value;
+        payload.bio = document.getElementById('reg-bio').value;
+      }
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Registration failed.');
+        }
+
+        localStorage.setItem('apex_token', data.token);
+        localStorage.setItem('apex_user', JSON.stringify(data.user));
+
+        showAlert('Registration successful! Redirecting to dashboard...', true);
+        setTimeout(() => {
+          if (data.user.role === 'customer') window.location.href = '/index.html#customer-dashboard';
+          else if (data.user.role === 'provider') window.location.href = '/index.html#provider-dashboard';
+          else if (data.user.role === 'admin') window.location.href = '/index.html#admin-dashboard';
+          else window.location.href = '/index.html';
+        }, 500);
+
+      } catch (err) {
+        // Fallback for offline mode directly in localStorage
+        const users = JSON.parse(localStorage.getItem('apex_users') || '[]');
+        if (users.find(u => u.email === email)) {
+          showAlert('Email address is already registered.');
+          return;
+        }
+
+        const newId = users.length + 1;
+        users.push({ id: newId, name, email, password, role });
+        localStorage.setItem('apex_users', JSON.stringify(users));
+
+        if (role === 'provider') {
+          const providers = JSON.parse(localStorage.getItem('apex_providers') || '[]');
+          providers.push({
+            user_id: newId,
+            category: payload.category,
+            bio: payload.bio || '',
+            hourly_rate: parseFloat(payload.hourly_rate) || 25,
+            rating: 5.0,
+            review_count: 0,
+            availability: '{"days":["Monday","Tuesday","Wednesday","Thursday","Friday"],"hours":{"start":"09:00","end":"17:00"}}',
+            status: 'approved'
+          });
+          localStorage.setItem('apex_providers', JSON.stringify(providers));
+        }
+
+        const token = Math.random().toString(36).substring(2);
+        localStorage.setItem('apex_token', token);
+        localStorage.setItem('apex_user', JSON.stringify({ id: newId, name, email, role }));
+
+        showAlert('Offline registration successful! Redirecting...', true);
+        setTimeout(() => {
+          if (role === 'customer') window.location.href = '/index.html#customer-dashboard';
+          else if (role === 'provider') window.location.href = '/index.html#provider-dashboard';
+          else if (role === 'admin') window.location.href = '/index.html#admin-dashboard';
+          else window.location.href = '/index.html';
+        }, 500);
+      }
+    });
+
+    // Social OAuth Sign-Up Handlers
+    function handleOAuthRegister(providerName) {
+      const defaultEmail = `${providerName.toLowerCase()}.newuser@example.com`;
+      const email = prompt(`Sign up with ${providerName}\nEnter your ${providerName} account email:`, defaultEmail);
+      if (!email) return;
+
+      const userName = email.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+      const role = roleSelect.value || 'customer';
+      const token = 'oauth_' + providerName.toLowerCase() + '_' + Math.random().toString(36).substring(2);
+
+      const userObj = {
+        id: Math.floor(Math.random() * 1000) + 200,
+        name: userName || `${providerName} User`,
+        email: email,
+        role: role
+      };
+
+      localStorage.setItem('apex_token', token);
+      localStorage.setItem('apex_user', JSON.stringify(userObj));
+
+      showAlert(`Registered via ${providerName}! Redirecting...`, true);
+      setTimeout(() => {
+        if (role === 'customer') window.location.href = '/index.html#customer-dashboard';
+        else if (role === 'provider') window.location.href = '/index.html#provider-dashboard';
+        else if (role === 'admin') window.location.href = '/index.html#admin-dashboard';
+        else window.location.href = '/index.html';
+      }, 600);
+    }
+
+    document.getElementById('btn-reg-google')?.addEventListener('click', () => handleOAuthRegister('Google'));
+    document.getElementById('btn-reg-microsoft')?.addEventListener('click', () => handleOAuthRegister('Microsoft'));
+    document.getElementById('btn-reg-yahoo')?.addEventListener('click', () => handleOAuthRegister('Yahoo'));
+  </script>
+</body>
+</html>

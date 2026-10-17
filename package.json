@@ -1,0 +1,23 @@
+{
+  "name": "on-demand-service-booking",
+  "version": "1.0.0",
+  "description": "On-Demand Service Booking and Management System - ApexServices",
+  "author": "Your Team",
+  "license": "MIT",
+  "main": "server.js",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed": "node database.js",
+    "test-db": "node test-db.js",
+    "reset-db": "rm services.db 2>/dev/null; npm run seed"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {}
+}
