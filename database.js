@@ -100,6 +100,9 @@ const db = {
           if (row && row.sum !== undefined) {
             row.sum = row.sum !== null ? Number(row.sum) : 0;
           }
+          if (row && row.avg_rating !== undefined) {
+            row.avg_rating = row.avg_rating !== null ? Number(row.avg_rating) : null;
+          }
           return row;
         },
         async all(...args) {
@@ -109,6 +112,7 @@ const db = {
           return res.rows.map(row => {
             if (row.count !== undefined) row.count = Number(row.count);
             if (row.sum !== undefined) row.sum = row.sum !== null ? Number(row.sum) : 0;
+            if (row.avg_rating !== undefined) row.avg_rating = row.avg_rating !== null ? Number(row.avg_rating) : null;
             return row;
           });
         },

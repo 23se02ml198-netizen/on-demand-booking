@@ -747,11 +747,14 @@ app.post('/api/bookings/:id/review', authenticateSession, async (req, res) => {
         SELECT COUNT(*) as count, AVG(rating) as avg_rating FROM reviews WHERE provider_id = ?
       `).get(booking.provider_id);
 
+      const avg = Number(reviewStats?.avg_rating || rating);
+      const count = Number(reviewStats?.count || 1);
+
       await db.prepare(`
         UPDATE providers 
         SET rating = ?, review_count = ? 
         WHERE user_id = ?
-      `).run(parseFloat(reviewStats.avg_rating.toFixed(1)), reviewStats.count, booking.provider_id);
+      `).run(parseFloat(avg.toFixed(1)), count, booking.provider_id);
 
       await db.prepare('COMMIT').run();
 
