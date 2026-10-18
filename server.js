@@ -765,7 +765,7 @@ app.post('/api/bookings/:id/review', authenticateSession, async (req, res) => {
     }
   } catch (error) {
     console.error('Review submit error:', error);
-    return res.status(500).json({ error: 'Failed to submit review.' });
+    return res.status(500).json({ error: `Failed to submit review: ${error.message || 'server error'}` });
   }
 });
 
