@@ -17,7 +17,9 @@
     "reset-db": "rm services.db 2>/dev/null; npm run seed"
   },
   "dependencies": {
+    "dotenv": "^18.0.8",
     "express": "^4.19.2",
+    "google-auth-library": "^11.3.1",
     "pg": "^8.23.1"
   }
 }

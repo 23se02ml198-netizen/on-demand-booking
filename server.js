@@ -198,12 +198,18 @@ app.post('/api/auth/google', async (req, res) => {
   }
 
   try {
-    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
     if (!verifyRes.ok) {
       return res.status(401).json({ error: 'Invalid or expired Google token.' });
     }
 
     const payload = await verifyRes.json();
+
+    // Security: ensure the token was issued for THIS app
+    if (process.env.GOOGLE_CLIENT_ID && payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: 'Google token audience mismatch.' });
+    }
+
     const { email, name, sub } = payload;
 
     if (!email) {
