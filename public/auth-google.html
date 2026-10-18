@@ -115,32 +115,80 @@
 
     <button class="btn-submit" id="btn-continue">Continue as Alice Johnson</button>
 
+    <div style="text-align: center; margin: 12px 0 6px;">
+      <a href="#" id="use-different-account" style="font-size: 13px; color: #1a73e8; text-decoration: none; font-weight: 500;">Use another Google account</a>
+    </div>
+
     <div class="footer-note">
       To continue, Google will share your name, email address, and profile picture with ApexServices. See ApexServices's <a href="#">Privacy Policy</a> and <a href="#">Terms of Service</a>.
     </div>
   </div>
 
   <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const emailParam = urlParams.get('email');
+    const nameParam = urlParams.get('name');
+
+    let email = emailParam || 'alice@example.com';
+    let name = nameParam || (emailParam ? emailParam.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase()) : 'Alice Johnson');
+
+    document.querySelector('.acc-name').textContent = name;
+    document.querySelector('.acc-email').textContent = email;
+    document.querySelector('.avatar').textContent = (name || 'G').charAt(0).toUpperCase();
+    document.getElementById('btn-continue').textContent = `Continue as ${name}`;
+
     document.getElementById('pick-account').addEventListener('click', doAuth);
     document.getElementById('btn-continue').addEventListener('click', doAuth);
+    document.getElementById('use-different-account')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const customEmail = prompt('Enter your Google email address:');
+      if (customEmail && customEmail.trim()) {
+        const clean = customEmail.trim();
+        const cleanName = clean.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+        window.location.search = `?email=${encodeURIComponent(clean)}&name=${encodeURIComponent(cleanName)}`;
+      }
+    });
 
     async function doAuth() {
       try {
-        const res = await fetch('/api/auth/login', {
+        let res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'alice@example.com', password: 'alice123' })
+          body: JSON.stringify({ email: email, password: email === 'alice@example.com' ? 'alice123' : 'google_oauth_' + email })
         });
+
+        if (res.status === 401 && email !== 'alice@example.com') {
+          // Register on the fly if new user
+          const regRes = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: name,
+              email: email,
+              password: 'google_oauth_' + email,
+              role: 'customer'
+            })
+          });
+
+          if (regRes.ok) {
+            res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email, password: 'google_oauth_' + email })
+            });
+          }
+        }
+
         const data = await res.json();
         if (res.ok) {
           localStorage.setItem('apex_token', data.token);
           localStorage.setItem('apex_user', JSON.stringify(data.user));
-          window.location.href = '/index.html';
+          window.location.href = '/index.html#customer-dashboard';
         } else {
-          alert('Authentication failed.');
+          alert('Authentication failed: ' + (data.error || 'Please sign in or register with email.'));
         }
       } catch(e) {
-        alert('Server connection error.');
+        alert('Server connection error: ' + e.message);
       }
     }
   </script>

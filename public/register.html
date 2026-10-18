@@ -216,14 +216,7 @@
     const providerFields = document.getElementById('provider-fields');
     const alertBox = document.getElementById('alert-box');
 
-    // Social Provider Page Redirects
-    const googleRegBtn = document.getElementById('btn-reg-google');
-    const msRegBtn = document.getElementById('btn-reg-microsoft');
-    const yahooRegBtn = document.getElementById('btn-reg-yahoo');
 
-    if (googleRegBtn) googleRegBtn.addEventListener('click', () => window.location.href = '/auth-google.html');
-    if (msRegBtn) msRegBtn.addEventListener('click', () => window.location.href = '/auth-microsoft.html');
-    if (yahooRegBtn) yahooRegBtn.addEventListener('click', () => window.location.href = '/auth-yahoo.html');
 
     function showAlert(msg, isSuccess = false) {
       alertBox.style.display = 'block';
@@ -324,31 +317,15 @@
 
     // Social OAuth Sign-Up Handlers
     function handleOAuthRegister(providerName) {
-      const defaultEmail = `${providerName.toLowerCase()}.newuser@example.com`;
-      const email = prompt(`Sign up with ${providerName}\nEnter your ${providerName} account email:`, defaultEmail);
-      if (!email) return;
+      const email = prompt(`Sign up with ${providerName}\nEnter your ${providerName} account email:`, '');
+      if (!email || !email.trim()) {
+        window.location.href = `/auth-${providerName.toLowerCase()}.html`;
+        return;
+      }
 
-      const userName = email.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
-      const role = roleSelect.value || 'customer';
-      const token = 'oauth_' + providerName.toLowerCase() + '_' + Math.random().toString(36).substring(2);
-
-      const userObj = {
-        id: Math.floor(Math.random() * 1000) + 200,
-        name: userName || `${providerName} User`,
-        email: email,
-        role: role
-      };
-
-      localStorage.setItem('apex_token', token);
-      localStorage.setItem('apex_user', JSON.stringify(userObj));
-
-      showAlert(`Registered via ${providerName}! Redirecting...`, true);
-      setTimeout(() => {
-        if (role === 'customer') window.location.href = '/index.html#customer-dashboard';
-        else if (role === 'provider') window.location.href = '/index.html#provider-dashboard';
-        else if (role === 'admin') window.location.href = '/index.html#admin-dashboard';
-        else window.location.href = '/index.html';
-      }, 600);
+      const cleanEmail = email.trim();
+      const userName = cleanEmail.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+      window.location.href = `/auth-${providerName.toLowerCase()}.html?email=${encodeURIComponent(cleanEmail)}&name=${encodeURIComponent(userName)}`;
     }
 
     document.getElementById('btn-reg-google')?.addEventListener('click', () => handleOAuthRegister('Google'));

@@ -220,14 +220,7 @@
       });
     }
 
-    // Social Provider Page Redirects
-    const googleBtn = document.getElementById('btn-oauth-google');
-    const msBtn = document.getElementById('btn-oauth-microsoft');
-    const yahooBtn = document.getElementById('btn-oauth-yahoo');
 
-    if (googleBtn) googleBtn.addEventListener('click', () => window.location.href = '/auth-google.html');
-    if (msBtn) msBtn.addEventListener('click', () => window.location.href = '/auth-microsoft.html');
-    if (yahooBtn) yahooBtn.addEventListener('click', () => window.location.href = '/auth-yahoo.html');
 
     function showAlert(msg, isSuccess = false) {
       alertBox.style.display = 'block';
@@ -294,27 +287,15 @@
 
     // Social OAuth Sign-In Handlers
     function handleOAuthLogin(providerName) {
-      const defaultEmail = `${providerName.toLowerCase()}.user@example.com`;
-      const email = prompt(`Sign in with ${providerName}\nEnter your ${providerName} account email:`, defaultEmail);
-      if (!email) return;
+      const email = prompt(`Sign in with ${providerName}\nEnter your ${providerName} account email:`, '');
+      if (!email || !email.trim()) {
+        window.location.href = `/auth-${providerName.toLowerCase()}.html`;
+        return;
+      }
 
-      const userName = email.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
-      const token = 'oauth_' + providerName.toLowerCase() + '_' + Math.random().toString(36).substring(2);
-
-      const userObj = {
-        id: Math.floor(Math.random() * 1000) + 100,
-        name: userName || `${providerName} User`,
-        email: email,
-        role: 'customer'
-      };
-
-      localStorage.setItem('apex_token', token);
-      localStorage.setItem('apex_user', JSON.stringify(userObj));
-
-      showAlert(`Authenticated via ${providerName}! Redirecting...`, true);
-      setTimeout(() => {
-        window.location.href = '/index.html#customer-dashboard';
-      }, 600);
+      const cleanEmail = email.trim();
+      const userName = cleanEmail.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+      window.location.href = `/auth-${providerName.toLowerCase()}.html?email=${encodeURIComponent(cleanEmail)}&name=${encodeURIComponent(userName)}`;
     }
 
     document.getElementById('btn-oauth-google')?.addEventListener('click', () => handleOAuthLogin('Google'));
