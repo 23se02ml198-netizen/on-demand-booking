@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Official Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
     body {
@@ -37,10 +39,29 @@
       margin-bottom: 8px;
     }
     p.subtext {
-      font-size: 16px;
+      font-size: 15px;
       color: #5f6368;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
+    .official-btn-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      min-height: 44px;
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 18px 0;
+      color: #5f6368;
+      font-size: 13px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #dadce0;
+    }
+    .divider span { padding: 0 12px; }
     .account-picker {
       border: 1px solid #dadce0;
       border-radius: 16px;
@@ -48,7 +69,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
       cursor: pointer;
       transition: background 0.2s ease;
       text-align: left;
@@ -81,12 +102,12 @@
       font-weight: 500;
       font-size: 14px;
       cursor: pointer;
-      margin-top: 12px;
+      margin-top: 6px;
       transition: background 0.2s;
     }
     .btn-submit:hover { background: #1557b0; }
     .footer-note {
-      margin-top: 28px;
+      margin-top: 24px;
       font-size: 12px;
       color: #5f6368;
       line-height: 1.5;
@@ -105,18 +126,28 @@
     <h1>Sign in with Google</h1>
     <p class="subtext">to continue to <strong>ApexServices</strong></p>
 
-    <div class="account-picker" id="pick-account">
-      <div class="avatar">A</div>
-      <div>
-        <div class="acc-name">Alice Johnson</div>
-        <div class="acc-email">alice.johnson@gmail.com</div>
-      </div>
+    <!-- Official Real Google Sign-In Container -->
+    <div id="google-official-btn" class="official-btn-container"></div>
+
+    <div class="divider" id="fallback-divider" style="display: none;">
+      <span>OR USE DEMO ACCOUNT</span>
     </div>
 
-    <button class="btn-submit" id="btn-continue">Continue as Alice Johnson</button>
+    <!-- Fallback / Simulated Account Picker -->
+    <div id="fallback-container">
+      <div class="account-picker" id="pick-account">
+        <div class="avatar">A</div>
+        <div>
+          <div class="acc-name">Alice Johnson</div>
+          <div class="acc-email">alice.johnson@gmail.com</div>
+        </div>
+      </div>
 
-    <div style="text-align: center; margin: 12px 0 6px;">
-      <a href="#" id="use-different-account" style="font-size: 13px; color: #1a73e8; text-decoration: none; font-weight: 500;">Use another Google account</a>
+      <button class="btn-submit" id="btn-continue">Continue as Alice Johnson</button>
+
+      <div style="text-align: center; margin: 12px 0 6px;">
+        <a href="#" id="use-different-account" style="font-size: 13px; color: #1a73e8; text-decoration: none; font-weight: 500;">Use another email address</a>
+      </div>
     </div>
 
     <div class="footer-note">
@@ -137,8 +168,8 @@
     document.querySelector('.avatar').textContent = (name || 'G').charAt(0).toUpperCase();
     document.getElementById('btn-continue').textContent = `Continue as ${name}`;
 
-    document.getElementById('pick-account').addEventListener('click', doAuth);
-    document.getElementById('btn-continue').addEventListener('click', doAuth);
+    document.getElementById('pick-account').addEventListener('click', doFallbackAuth);
+    document.getElementById('btn-continue').addEventListener('click', doFallbackAuth);
     document.getElementById('use-different-account')?.addEventListener('click', (e) => {
       e.preventDefault();
       const customEmail = prompt('Enter your Google email address:');
@@ -149,7 +180,58 @@
       }
     });
 
-    async function doAuth() {
+    // 1. Initialize Real Google Sign-In SDK
+    async function initRealGoogleOAuth() {
+      try {
+        const res = await fetch('/api/auth/google/client-id');
+        const data = await res.json();
+        const clientId = data.clientId;
+
+        if (clientId && window.google) {
+          google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleOfficialGoogleCredential
+          });
+
+          google.accounts.id.renderButton(
+            document.getElementById('google-official-btn'),
+            { theme: 'outline', size: 'large', width: 360, shape: 'pill', text: 'continue_with' }
+          );
+
+          // Prompt Google One-Tap dialog
+          google.accounts.id.prompt();
+
+          // Show divider if official button is active
+          document.getElementById('fallback-divider').style.display = 'flex';
+        }
+      } catch (err) {
+        console.warn('Real Google OAuth initialization info:', err.message);
+      }
+    }
+
+    // 2. Handle Official Google Credential JWT from Google
+    async function handleOfficialGoogleCredential(response) {
+      try {
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('apex_token', data.token);
+          localStorage.setItem('apex_user', JSON.stringify(data.user));
+          window.location.href = '/index.html#customer-dashboard';
+        } else {
+          alert('Google Sign-In failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Google verification error: ' + err.message);
+      }
+    }
+
+    // 3. Fallback / Simulated login
+    async function doFallbackAuth() {
       try {
         let res = await fetch('/api/auth/login', {
           method: 'POST',
@@ -158,7 +240,6 @@
         });
 
         if (res.status === 401 && email !== 'alice@example.com') {
-          // Register on the fly if new user
           const regRes = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -191,6 +272,19 @@
         alert('Server connection error: ' + e.message);
       }
     }
+
+    // Initialize when SDK loads
+    window.addEventListener('load', () => {
+      // Check every 300ms up to 3 seconds for google SDK readiness
+      let checks = 0;
+      const interval = setInterval(() => {
+        checks++;
+        if (window.google || checks > 10) {
+          clearInterval(interval);
+          initRealGoogleOAuth();
+        }
+      }, 300);
+    });
   </script>
 </body>
 </html>

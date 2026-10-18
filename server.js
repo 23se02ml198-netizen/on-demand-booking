@@ -184,6 +184,76 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ----------------------------------------------------
+// GOOGLE OAUTH ENDPOINTS
+// ----------------------------------------------------
+app.get('/api/auth/google/client-id', (req, res) => {
+  res.json({ clientId: process.env.GOOGLE_CLIENT_ID || '' });
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) {
+    return res.status(400).json({ error: 'Google credential token is required.' });
+  }
+
+  try {
+    const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    if (!verifyRes.ok) {
+      return res.status(401).json({ error: 'Invalid or expired Google token.' });
+    }
+
+    const payload = await verifyRes.json();
+    const { email, name, sub } = payload;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Google account does not contain a verified email.' });
+    }
+
+    let user = await db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+
+    if (!user) {
+      const randomSecret = crypto.randomBytes(24).toString('hex');
+      const { hash, salt } = hashPassword(randomSecret);
+      const regInsert = await db.prepare(`
+        INSERT INTO users (name, email, password_hash, password_salt, role)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(name || email.split('@')[0], email, hash, salt, 'customer');
+
+      const newUserId = regInsert.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email)).id;
+      user = { id: newUserId, name: name || email.split('@')[0], email, role: 'customer' };
+    }
+
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(sessionToken, user.id, expiresAt);
+
+    try {
+      const clientIp = req.ip || req.headers['x-forwarded-for'] || '127.0.0.1';
+      await db.prepare(`
+        INSERT INTO login_history (user_id, user_name, email, role, ip_address)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(user.id, user.name, user.email, user.role, clientIp);
+    } catch (e) {
+      console.error('Failed to record Google login audit:', e);
+    }
+
+    return res.json({
+      message: 'Google login successful.',
+      token: sessionToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    return res.status(500).json({ error: `Google login failed: ${error.message || 'server error'}` });
+  }
+});
+
 // Logout
 app.post('/api/auth/logout', authenticateSession, async (req, res) => {
   try {
