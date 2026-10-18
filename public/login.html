@@ -156,22 +156,6 @@
           </div>
         </div>
 
-        <button type="button" class="social-btn" id="btn-oauth-microsoft" style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 20px; border-radius: 12px; border: 1px solid #444444; background: #2f2f2f; color: #ffffff; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
-          <svg width="22" height="22" viewBox="0 0 23 23">
-            <path fill="#f35325" d="M1 1h10v10H1z"/>
-            <path fill="#81bc06" d="M12 1h10v10H12z"/>
-            <path fill="#05a6f0" d="M1 12h10v10H1z"/>
-            <path fill="#ffba08" d="M12 12h10v10H12z"/>
-          </svg>
-          <span style="color:#ffffff; font-weight:600;">Continue with Microsoft</span>
-        </button>
-
-        <button type="button" class="social-btn" id="btn-oauth-yahoo" style="display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 20px; border-radius: 12px; border: 1px solid #7b1fa2; background: linear-gradient(135deg, #6001d2 0%, #4a00a0 100%); color: #ffffff; font-weight: 600; font-size: 15px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(96,1,210,0.35);">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff">
-            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1.5 6h3l-3.5 6.5V18h-2v-5.5L4.5 6h3l2 4.5L10.5 6z"/>
-          </svg>
-          <span style="color:#ffffff; font-weight:600;">Continue with Yahoo</span>
-        </button>
       </div>
 
       <div class="auth-footer-link">
@@ -375,20 +359,6 @@
     window.addEventListener('load', () => {
       if (!googleInitialized) setTimeout(initGoogleSignIn, 150);
     });
-
-    function handleOAuthLogin(providerName) {
-      const email = prompt(`Sign in with ${providerName}\nEnter your ${providerName} account email:`, '');
-      if (!email || !email.trim()) {
-        window.location.href = `/auth-${providerName.toLowerCase()}.html`;
-        return;
-      }
-      const cleanEmail = email.trim();
-      const userName = cleanEmail.split('@')[0].replace('.', ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
-      window.location.href = `/auth-${providerName.toLowerCase()}.html?email=${encodeURIComponent(cleanEmail)}&name=${encodeURIComponent(userName)}`;
-    }
-
-    document.getElementById('btn-oauth-microsoft')?.addEventListener('click', () => handleOAuthLogin('Microsoft'));
-    document.getElementById('btn-oauth-yahoo')?.addEventListener('click', () => handleOAuthLogin('Yahoo'));
   </script>
 </body>
 </html>
