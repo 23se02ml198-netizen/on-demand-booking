@@ -19,6 +19,8 @@ const AppState = {
   activeChatBookingId: null,
   activeChatPartnerName: '',
   chatPollInterval: null,
+  customerPollInterval: null,
+  providerPollInterval: null,
 
   // Sub-tabs & filters inside dashboards
   customerDashTab: 'bookings',
@@ -841,6 +843,32 @@ async function loadCustomerDashboard() {
     AppState.userComplaints
   );
   bindCustomerDashboardEvents();
+
+  // Setup live auto-polling for customer booking status updates
+  if (!AppState.customerPollInterval) {
+    AppState.customerPollInterval = setInterval(async () => {
+      if (AppState.currentView === 'customer-dashboard' && AppState.currentUser && AppState.currentUser.role === 'customer') {
+        try {
+          const freshBookings = await apiCall('/api/bookings');
+          if (JSON.stringify(freshBookings) !== JSON.stringify(AppState.bookings)) {
+            AppState.bookings = freshBookings;
+            const container = document.getElementById('app-root');
+            if (container && AppState.currentView === 'customer-dashboard') {
+              container.innerHTML = UI.renderCustomerDashboard(
+                AppState.currentUser,
+                AppState.bookings,
+                AppState.customerDashTab,
+                AppState.expenditureFromDate,
+                AppState.expenditureToDate,
+                AppState.userComplaints
+              );
+              bindCustomerDashboardEvents();
+            }
+          }
+        } catch (e) { }
+      }
+    }, 3500);
+  }
 }
 
 // Load provider panel details

@@ -477,149 +477,126 @@ async function seedData() {
     console.log('[Database] Seeded categories.');
   }
 
-  const userRow = await db.prepare('SELECT COUNT(*) as count FROM users').get();
-  const usersCount = Number(userRow?.count || 0);
+  // Helper to ensure user exists
+  const ensureUser = async (name, email, password, role) => {
+    let user = await db.prepare('SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+    if (!user) {
+      const creds = hashPassword(password);
+      const res = await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
+        .run(name, email, creds.hash, creds.salt, role);
+      const id = res.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email)).id;
+      user = { id, name, email, role };
+    }
+    return user;
+  };
 
-  if (usersCount === 0) {
-    // 1. Admin
-    const adminCreds = hashPassword('admin123');
-    await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('System Admin', 'admin@services.com', adminCreds.hash, adminCreds.salt, 'admin');
+  // 1. Ensure Admin & Default Customers exist
+  await ensureUser('System Admin', 'admin@services.com', 'admin123', 'admin');
+  const alice = await ensureUser('Alice Johnson', 'alice@example.com', 'alice123', 'customer');
+  await ensureUser('Bob Smith', 'bob@example.com', 'bob123', 'customer');
 
-    // 2. Customers
-    const aliceCreds = hashPassword('alice123');
-    await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('Alice Johnson', 'alice@example.com', aliceCreds.hash, aliceCreds.salt, 'customer');
+  // 2. Ensure all 6 Default Providers exist in both users and providers tables
+  const defaultProviders = [
+    {
+      name: 'John Doe',
+      email: 'john@plumbing.com',
+      password: 'john123',
+      category: 'Plumbing',
+      bio: 'Professional plumber with 10 years of experience in leak repairs, pipe installations, and bathroom fittings. Reliable and quick.',
+      hourly_rate: 750.00,
+      rating: 4.8,
+      review_count: 1
+    },
+    {
+      name: 'Sarah Connor',
+      email: 'sarah@cleaning.com',
+      password: 'sarah123',
+      category: 'Cleaning',
+      bio: 'Expert home cleaning specialist. Detail-oriented, pet-friendly, and dedicated to making your home shine. Available on weekends.',
+      hourly_rate: 600.00,
+      rating: 4.9,
+      review_count: 1
+    },
+    {
+      name: 'Mike Sparks',
+      email: 'mike@electrical.com',
+      password: 'mike123',
+      category: 'Electrical',
+      bio: 'Licensed electrician. Specialized in home wiring, smart lighting installations, panel upgrades, and electrical safety audits.',
+      hourly_rate: 900.00,
+      rating: 4.7,
+      review_count: 1
+    },
+    {
+      name: 'Elena Rostova',
+      email: 'elena@beauty.com',
+      password: 'elena123',
+      category: 'Beauty & Wellness',
+      bio: 'Professional hair stylist and beautician. Bringing salon-grade hair care, makeup, bridal service, and facial treatments to your doorstep.',
+      hourly_rate: 800.00,
+      rating: 5.0,
+      review_count: 1
+    },
+    {
+      name: 'Priya Nair',
+      email: 'priya@appliancerepair.com',
+      password: 'priya123',
+      category: 'Appliance Repair',
+      bio: 'Certified appliance technician for air conditioners, refrigerators, washing machines, microwaves, TVs, and geysers.',
+      hourly_rate: 850.00,
+      rating: 4.9,
+      review_count: 1
+    },
+    {
+      name: 'Arjun Mehta',
+      email: 'arjun@pestcontrol.com',
+      password: 'arjun123',
+      category: 'Pest Control',
+      bio: 'Licensed pest control professional providing safe termite, cockroach, mosquito, bed bug, rodent, and general pest treatments.',
+      hourly_rate: 700.00,
+      rating: 4.8,
+      review_count: 1
+    }
+  ];
 
-    const bobCreds = hashPassword('bob123');
-    await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('Bob Smith', 'bob@example.com', bobCreds.hash, bobCreds.salt, 'customer');
+  let firstProviderId = null;
+  for (const p of defaultProviders) {
+    const pUser = await ensureUser(p.name, p.email, p.password, 'provider');
+    if (!firstProviderId) firstProviderId = pUser.id;
 
-    // 3. Providers
-    // John - Plumber
-    const johnCreds = hashPassword('john123');
-    const johnInsert = await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('John Doe', 'john@plumbing.com', johnCreds.hash, johnCreds.salt, 'provider');
-    const johnId = johnInsert.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE email = ?').get('john@plumbing.com')).id;
+    const existingPro = await db.prepare('SELECT user_id FROM providers WHERE user_id = ?').get(pUser.id);
+    if (!existingPro) {
+      await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, rating, review_count, status) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(pUser.id, p.category, p.bio, p.hourly_rate, p.rating, p.review_count, 'approved');
+    } else {
+      await db.prepare('UPDATE providers SET status = ? WHERE user_id = ? AND status != ?').run('approved', pUser.id, 'approved');
+    }
+  }
+  console.log('[Database] Verified and seeded default providers.');
 
-    await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, rating, review_count) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(
-        johnId,
-        'Plumbing',
-        'Professional plumber with 10 years of experience in leak repairs, pipe installations, and bathroom fittings. Reliable and quick.',
-        750.00,
-        4.8,
-        1
-      );
-
-    // Sarah - Cleaner
-    const sarahCreds = hashPassword('sarah123');
-    const sarahInsert = await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('Sarah Connor', 'sarah@cleaning.com', sarahCreds.hash, sarahCreds.salt, 'provider');
-    const sarahId = sarahInsert.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE email = ?').get('sarah@cleaning.com')).id;
-
-    await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, rating, review_count) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(
-        sarahId,
-        'Cleaning',
-        'Expert home cleaning specialist. Detail-oriented, pet-friendly, and dedicated to making your home shine. Available on weekends.',
-        600.00,
-        4.9,
-        1
-      );
-
-    // Mike - Electrician
-    const mikeCreds = hashPassword('mike123');
-    const mikeInsert = await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('Mike Sparks', 'mike@electrical.com', mikeCreds.hash, mikeCreds.salt, 'provider');
-    const mikeId = mikeInsert.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE email = ?').get('mike@electrical.com')).id;
-
-    await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, rating, review_count) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(
-        mikeId,
-        'Electrical',
-        'Licensed electrician. Specialized in home wiring, smart lighting installations, panel upgrades, and electrical safety audits.',
-        900.00,
-        4.7,
-        1
-      );
-
-    // Elena - Beautician
-    const elenaCreds = hashPassword('elena123');
-    const elenaInsert = await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('Elena Rostova', 'elena@beauty.com', elenaCreds.hash, elenaCreds.salt, 'provider');
-    const elenaId = elenaInsert.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE email = ?').get('elena@beauty.com')).id;
-
-    await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, rating, review_count) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(
-        elenaId,
-        'Beauty & Wellness',
-        'Professional hair stylist and beautician. Bringing salon-grade hair care, makeup, bridal service, and facial treatments to your doorstep.',
-        800.00,
-        5.0,
-        1
-      );
-
-    // Priya - Appliance Repair Specialist
-    const priyaCreds = hashPassword('priya123');
-    const priyaInsert = await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('Priya Nair', 'priya@appliancerepair.com', priyaCreds.hash, priyaCreds.salt, 'provider');
-    const priyaId = priyaInsert.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE email = ?').get('priya@appliancerepair.com')).id;
-
-    await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, rating, review_count) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(
-        priyaId,
-        'Appliance Repair',
-        'Certified appliance technician for air conditioners, refrigerators, washing machines, microwaves, TVs, and geysers.',
-        850.00,
-        4.9,
-        1
-      );
-
-    // Arjun - Pest Control Specialist
-    const arjunCreds = hashPassword('arjun123');
-    const arjunInsert = await db.prepare('INSERT INTO users (name, email, password_hash, password_salt, role) VALUES (?, ?, ?, ?, ?)')
-      .run('Arjun Mehta', 'arjun@pestcontrol.com', arjunCreds.hash, arjunCreds.salt, 'provider');
-    const arjunId = arjunInsert.lastInsertRowid || (await db.prepare('SELECT id FROM users WHERE email = ?').get('arjun@pestcontrol.com')).id;
-
-    await db.prepare('INSERT INTO providers (user_id, category, bio, hourly_rate, rating, review_count) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(
-        arjunId,
-        'Pest Control',
-        'Licensed pest control professional providing safe termite, cockroach, mosquito, bed bug, rodent, and general pest treatments.',
-        700.00,
-        4.8,
-        1
-      );
-
-    console.log('[Database] Seeded users and providers.');
-
-    const customerUser = await db.prepare('SELECT id FROM users WHERE email = ?').get('alice@example.com');
-    const customerId = customerUser.id;
-
-    // Test Completed Booking for John (Plumbing)
+  // 3. Seed initial completed booking and review if bookings table is empty
+  const bookingsCountRow = await db.prepare('SELECT COUNT(*) as count FROM bookings').get();
+  if (Number(bookingsCountRow?.count || 0) === 0 && alice && firstProviderId) {
     const bookingInsert = await db.prepare(`
-      INSERT INTO bookings (customer_id, provider_id, category, booking_date, booking_time, duration_hours, address, status, total_price, notes) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO bookings (customer_id, provider_id, category, booking_date, booking_time, duration_hours, address, status, total_price, admin_approved, provider_completed, admin_completion_confirmed, notes) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'completed', 1500.00, 1, 1, 1, ?)
     `).run(
-      customerId,
-      johnId,
+      alice.id,
+      firstProviderId,
       'Plumbing',
       '2026-06-28',
       '10:00',
       2,
       'Apartment 4B, Pine Street, Cityville',
-      'completed',
-      1500.00,
       'Fix kitchen sink leak and check bathroom pressure.'
     );
-    const bookingId = bookingInsert.lastInsertRowid || (await db.prepare('SELECT id FROM bookings WHERE customer_id = ?').get(customerId)).id;
+    const bookingId = bookingInsert.lastInsertRowid || (await db.prepare('SELECT id FROM bookings WHERE customer_id = ?').get(alice.id))?.id;
 
-    // Test Review for John (Plumbing)
-    await db.prepare('INSERT INTO reviews (booking_id, customer_id, provider_id, rating, comment) VALUES (?, ?, ?, ?, ?)')
-      .run(bookingId, customerId, johnId, 5, 'John was very efficient and fixed the kitchen leak in no time. Highly recommended!');
-
-    console.log('[Database] Seeded initial booking and review.');
+    if (bookingId) {
+      await db.prepare('INSERT INTO reviews (booking_id, customer_id, provider_id, rating, comment) VALUES (?, ?, ?, ?, ?)')
+        .run(bookingId, alice.id, firstProviderId, 5, 'John was very efficient and fixed the kitchen leak in no time. Highly recommended!');
+      console.log('[Database] Seeded initial booking and review.');
+    }
   }
 }
 

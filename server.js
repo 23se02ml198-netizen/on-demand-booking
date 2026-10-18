@@ -491,7 +491,7 @@ app.get('/api/bookings', authenticateSession, async (req, res) => {
          SELECT bookings.*, users.name as provider_name, users.email as provider_email,
            reviews.rating as review_rating, reviews.comment as review_comment
         FROM bookings
-        JOIN users ON bookings.provider_id = users.id
+        LEFT JOIN users ON bookings.provider_id = users.id
         LEFT JOIN reviews ON reviews.booking_id = bookings.id
         WHERE bookings.customer_id = ?
       `;
@@ -512,7 +512,7 @@ app.get('/api/bookings', authenticateSession, async (req, res) => {
         SELECT bookings.*, users.name as customer_name, users.email as customer_email,
           reviews.rating as review_rating, reviews.comment as review_comment
         FROM bookings
-        JOIN users ON bookings.customer_id = users.id
+        LEFT JOIN users ON bookings.customer_id = users.id
         LEFT JOIN reviews ON reviews.booking_id = bookings.id
         WHERE bookings.provider_id = ? OR (bookings.category = (SELECT category FROM providers WHERE user_id = ?) AND bookings.status != 'cancelled')
       `;
@@ -532,8 +532,8 @@ app.get('/api/bookings', authenticateSession, async (req, res) => {
       query = `
         SELECT bookings.*, c.name as customer_name, p.name as provider_name
         FROM bookings
-        JOIN users c ON bookings.customer_id = c.id
-        JOIN users p ON bookings.provider_id = p.id
+        LEFT JOIN users c ON bookings.customer_id = c.id
+        LEFT JOIN users p ON bookings.provider_id = p.id
         WHERE 1=1
       `;
 
@@ -673,11 +673,18 @@ app.put('/api/bookings/:id/status', authenticateSession, async (req, res) => {
 
     // Update status and provider_completed flag
     if (status === 'completed') {
-      await db.prepare('UPDATE bookings SET status = ?, provider_completed = 1 WHERE id = ?').run(status, bookingId);
+      if (req.user.role === 'provider') {
+        // Provider finished their work; mark provider_completed = 1 for Admin verification
+        await db.prepare('UPDATE bookings SET provider_completed = 1, status = \'in_progress\' WHERE id = ?').run(bookingId);
+        return res.json({ message: 'Work marked completed successfully! Sent to Admin for verification and confirmation.' });
+      } else {
+        await db.prepare('UPDATE bookings SET status = ?, provider_completed = 1 WHERE id = ?').run(status, bookingId);
+        return res.json({ message: `Booking status updated to ${status}.` });
+      }
     } else {
       await db.prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, bookingId);
+      return res.json({ message: `Booking status updated to ${status}.` });
     }
-    return res.json({ message: `Booking status updated to ${status}.` });
   } catch (error) {
     console.error('Update booking status error:', error);
     return res.status(500).json({ error: 'Failed to update booking status.' });
@@ -713,7 +720,7 @@ app.post('/api/bookings/:id/review', authenticateSession, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to review this booking.' });
     }
 
-    if (booking.admin_completion_confirmed !== 1 && booking.status !== 'completed') {
+    if (booking.admin_completion_confirmed !== 1) {
       return res.status(400).json({ error: 'Customer rating is locked until Admin verifies and confirms provider work completion.' });
     }
 
@@ -1141,8 +1148,8 @@ app.get('/api/admin/stats', authenticateSession, async (req, res) => {
     const allBookings = await db.prepare(`
       SELECT bookings.*, c.name as customer_name, p.name as provider_name
       FROM bookings
-      JOIN users c ON bookings.customer_id = c.id
-      JOIN users p ON bookings.provider_id = p.id
+      LEFT JOIN users c ON bookings.customer_id = c.id
+      LEFT JOIN users p ON bookings.provider_id = p.id
       ORDER BY bookings.created_at DESC
     `).all();
 

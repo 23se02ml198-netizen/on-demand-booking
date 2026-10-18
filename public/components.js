@@ -171,22 +171,29 @@ export function renderCustomerDashboard(user, bookings, activeTab = 'bookings', 
     contentHtml = bookings.length > 0 ? bookings.map(b => {
       const isUnlockedByAdmin = b.admin_completion_confirmed === 1 || (b.status === 'completed' && b.admin_approved === 1);
       const isProviderDone = b.provider_completed === 1;
+      const isApproved = b.admin_approved === 1;
 
       return `
         <div class="glass-card booking-card">
           <div class="booking-category-icon">
-            ${getCategoryIcon(b.category.toLowerCase().split(' ')[0])}
+            ${getCategoryIcon((b.category || 'cleaning').toLowerCase().split(' ')[0])}
           </div>
           <div class="booking-details-col">
-            ${isUnlockedByAdmin ? `
-              <span class="status-badge status-completed">✓ Work Confirmed by Admin</span>
+            ${b.status === 'cancelled' ? `
+              <span class="status-badge status-cancelled">Cancelled</span>
+            ` : isUnlockedByAdmin ? `
+              <span class="status-badge status-completed">✓ Work Verified by Admin &ndash; Completed</span>
             ` : isProviderDone ? `
-              <span class="status-badge status-in_progress" style="background:rgba(234,179,8,0.15); color:#facc15; border-color:rgba(234,179,8,0.3);">⌛ Work Done - Awaiting Admin Confirmation</span>
+              <span class="status-badge status-in_progress" style="background:rgba(234,179,8,0.15); color:#facc15; border-color:rgba(234,179,8,0.3);">⌛ Work Done &ndash; Awaiting Admin Confirmation</span>
+            ` : (isApproved || b.status === 'accepted') ? `
+              <span class="status-badge status-accepted" style="background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.3);">✓ Admin Approved &amp; Pro Assigned (${b.provider_name || 'Assigned'})</span>
+            ` : b.status === 'in_progress' ? `
+              <span class="status-badge status-in_progress">▶ Service In Progress</span>
             ` : `
-              <span class="status-badge status-${b.status}">${b.status.replace('_', ' ')}</span>
+              <span class="status-badge status-pending" style="background:rgba(251,191,36,0.15); color:#fbbf24; border-color:rgba(251,191,36,0.3);">⌛ Request Sent to Admin &ndash; Pending Pro Assignment</span>
             `}
 
-            <h3 style="margin-top: 6px;">${b.category} with ${b.provider_name}</h3>
+            <h3 style="margin-top: 6px;">${b.category} with ${b.provider_name || 'Assigned Professional'}</h3>
             <div class="booking-schedule-row">
               <span style="display:flex; align-items:center; gap: 4px;">
                 ${Icons.calendar} ${b.booking_date}
@@ -204,7 +211,7 @@ export function renderCustomerDashboard(user, bookings, activeTab = 'bookings', 
             <div style="font-weight: 700; font-size: 18px; color: var(--text-white);">${formatINR(b.total_price)}</div>
             
             <div style="display: flex; gap: 8px; margin-top: 10px; align-items:center; flex-wrap:wrap;">
-              <button class="btn btn-secondary btn-sm btn-chat-booking" data-booking-id="${b.id}" data-partner-name="${b.provider_name}">
+              <button class="btn btn-secondary btn-sm btn-chat-booking" data-booking-id="${b.id}" data-partner-name="${b.provider_name || 'Service Partner'}">
                 ${Icons.chat} Chat
               </button>
               
