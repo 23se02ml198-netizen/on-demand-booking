@@ -26,10 +26,16 @@ let lastInsertedId = 1;
 
 if (isPostgres) {
   console.log('[Database] Connecting to PostgreSQL Database...');
-  const needsSsl = !databaseUrl.includes('localhost') && !databaseUrl.includes('.railway.internal');
+  let ssl = false;
+  if (!databaseUrl.includes('sslmode=disable') && !databaseUrl.includes('localhost') && !databaseUrl.includes('.railway.internal') && !databaseUrl.includes('127.0.0.1')) {
+    ssl = { rejectUnauthorized: false };
+  }
   pool = new Pool({
     connectionString: databaseUrl,
-    ssl: needsSsl ? { rejectUnauthorized: false } : false
+    ssl: ssl
+  });
+  pool.on('error', (err) => {
+    console.error('[Database] Unexpected PostgreSQL pool error:', err);
   });
 } else {
   const dbPath = process.env.DB_PATH
@@ -125,9 +131,14 @@ const db = {
           }
 
           let pgSql = toPgSql(sql);
-          const isInsert = /^\s*INSERT\s+INTO/i.test(pgSql);
-          if (isInsert && !/RETURNING/i.test(pgSql)) {
-            pgSql += ' RETURNING id';
+          const insertMatch = /^\s*INSERT\s+INTO\s+([a-zA-Z0-9_"]+)/i.exec(pgSql);
+          const isInsert = Boolean(insertMatch);
+          if (insertMatch && !/RETURNING/i.test(pgSql)) {
+            const table = insertMatch[1].replace(/["']/g, '').toLowerCase();
+            const tablesWithId = ['users', 'bookings', 'messages', 'categories', 'reviews', 'complaints', 'login_history'];
+            if (tablesWithId.includes(table)) {
+              pgSql += ' RETURNING id';
+            }
           }
 
           const res = await pool.query(pgSql, params);

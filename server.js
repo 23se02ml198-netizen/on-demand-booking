@@ -128,7 +128,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
   } catch (error) {
     console.error('Registration error:', error);
-    return res.status(500).json({ error: 'Failed to register user.' });
+    return res.status(500).json({ error: `Failed to register user: ${error.message || 'server error'}` });
   }
 });
 
@@ -180,7 +180,7 @@ app.post('/api/auth/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return res.status(500).json({ error: 'Login failed due to server error.' });
+    return res.status(500).json({ error: `Login failed: ${error.message || 'server error'}` });
   }
 });
 
