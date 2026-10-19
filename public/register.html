@@ -356,6 +356,17 @@
       }
     }
 
+    // Clicking Google button opens dedicated Google Auth page with role
+    const regGoogleBtn = document.getElementById('btn-reg-google');
+    if (regGoogleBtn) {
+      regGoogleBtn.addEventListener('click', () => {
+        const role = roleSelect.value || 'customer';
+        const cat = document.getElementById('reg-cat') ? document.getElementById('reg-cat').value : 'Cleaning';
+        const rate = document.getElementById('reg-rate') ? document.getElementById('reg-rate').value : '600';
+        window.location.href = `/auth-google.html?role=${encodeURIComponent(role)}&cat=${encodeURIComponent(cat)}&rate=${encodeURIComponent(rate)}`;
+      });
+    }
+
     // Called by Google with a verified ID token (JWT)
     async function handleGoogleCredential(response) {
       if (!response || !response.credential) {
@@ -365,10 +376,21 @@
 
       try {
         showAlert('Verifying your Google account...', true);
+        const role = roleSelect.value || 'customer';
+        const cat = document.getElementById('reg-cat') ? document.getElementById('reg-cat').value : 'Cleaning';
+        const rate = document.getElementById('reg-rate') ? document.getElementById('reg-rate').value : '600';
+        const bio = document.getElementById('reg-bio') ? document.getElementById('reg-bio').value : '';
+
         const res = await fetch('/api/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credential: response.credential })
+          body: JSON.stringify({
+            credential: response.credential,
+            role: role,
+            category: cat,
+            hourly_rate: rate,
+            bio: bio
+          })
         });
         const data = await res.json();
 

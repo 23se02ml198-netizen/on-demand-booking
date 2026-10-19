@@ -1779,9 +1779,7 @@ On-Demand Service Booking and Management System/
 │   ├── register.html                # Multi-role user and provider registration interface
 │   ├── categories.html              # Service category directory view
 │   ├── about.html                   # Platform background and informational view
-│   ├── auth-google.html             # Google Identity Services OAuth callback handler
-│   ├── auth-microsoft.html          # Microsoft OAuth handler stub
-│   └── auth-yahoo.html              # Yahoo OAuth handler stub
+│   └── auth-google.html             # Google Identity Services OAuth callback handler with multi-role selection
 └── scratch/                         # Automated Quality Assurance & Verification
     ├── test_endpoints.js            # Automated 14-step integration test runner
     └── test_admin_dispatch_finance.js # Standalone admin dispatch & escrow split verification

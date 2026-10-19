@@ -118,13 +118,25 @@
         </div>
       </div>
 
-      <div class="social-divider" style="display:flex; align-items:center; margin:24px 0 20px 0; color:var(--text-muted); font-size:13px;">
+      <div class="social-divider" style="display:flex; align-items:center; margin:24px 0 16px 0; color:var(--text-muted); font-size:13px;">
         <div style="flex:1; border-bottom:1px solid var(--border-glass);"></div>
-        <span style="padding:0 12px;">Or continue with</span>
+        <span style="padding:0 12px;">Or sign in with Google</span>
         <div style="flex:1; border-bottom:1px solid var(--border-glass);"></div>
       </div>
 
-      <div class="social-actions" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+      <!-- Role Selection for Google Sign-In -->
+      <div style="margin-bottom: 12px; text-align: left;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">
+          Choose Google Account Role:
+        </label>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+          <button type="button" class="btn btn-sm google-role-btn active" data-role="customer" style="padding: 8px 4px; font-size: 12px; font-weight: 600; text-align: center; border-radius: 8px; border: 1px solid var(--primary); background: rgba(56, 189, 248, 0.15); color: var(--primary); cursor: pointer;">👤 Customer</button>
+          <button type="button" class="btn btn-sm google-role-btn" data-role="provider" style="padding: 8px 4px; font-size: 12px; font-weight: 600; text-align: center; border-radius: 8px; border: 1px solid var(--border-glass); background: transparent; color: var(--text-muted); cursor: pointer;">🛠️ Provider</button>
+          <button type="button" class="btn btn-sm google-role-btn" data-role="admin" style="padding: 8px 4px; font-size: 12px; font-weight: 600; text-align: center; border-radius: 8px; border: 1px solid var(--border-glass); background: transparent; color: var(--text-muted); cursor: pointer;">🔑 Admin</button>
+        </div>
+      </div>
+
+      <div class="social-actions" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
 
         <!-- ============================================================= -->
         <!-- GOOGLE BUTTON — rendered by Google Identity Services          -->
@@ -319,6 +331,32 @@
       }
     }
 
+    // Role Selection Logic for Google Sign-In
+    let selectedGoogleRole = 'customer';
+    document.querySelectorAll('.google-role-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.google-role-btn').forEach(b => {
+          b.classList.remove('active');
+          b.style.background = 'transparent';
+          b.style.borderColor = 'var(--border-glass)';
+          b.style.color = 'var(--text-muted)';
+        });
+        btn.classList.add('active');
+        btn.style.background = 'rgba(56, 189, 248, 0.15)';
+        btn.style.borderColor = 'var(--primary)';
+        btn.style.color = 'var(--primary)';
+        selectedGoogleRole = btn.getAttribute('data-role');
+      });
+    });
+
+    // Clicking Google button opens dedicated Google Auth page with role
+    const googleBtn = document.getElementById('btn-oauth-google');
+    if (googleBtn) {
+      googleBtn.addEventListener('click', () => {
+        window.location.href = `/auth-google.html?role=${selectedGoogleRole}`;
+      });
+    }
+
     async function handleGoogleCredential(response) {
       if (!response || !response.credential) {
         showAlert('Google did not return a credential. Please try again.');
@@ -330,7 +368,7 @@
         const res = await fetch('/api/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ credential: response.credential })
+          body: JSON.stringify({ credential: response.credential, role: selectedGoogleRole })
         });
         const data = await res.json();
 

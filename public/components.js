@@ -1609,6 +1609,7 @@ export function renderLoginModal(mode = 'login', entryGate = false) {
               <select id="reg-role" required>
                 <option value="customer">Customer (Looking for services)</option>
                 <option value="provider">Service Provider (Offering services)</option>
+                <option value="admin">Administrator (Manage Platform)</option>
               </select>
             </div>
 
