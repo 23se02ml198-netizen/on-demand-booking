@@ -1474,6 +1474,22 @@ app.get('*', async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running at http://0.0.0.0:${PORT}`);
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(`\n==================================================`);
+  console.log(`   APEXSERVICES SERVER STARTED SUCCESSFULLY!`);
+  console.log(`==================================================`);
+  console.log(`➜ Local:   http://localhost:${PORT}`);
+  console.log(`➜ Network: http://0.0.0.0:${PORT}`);
+  console.log(`\nReady for evaluation! Open http://localhost:${PORT} in your browser.\n`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n⚠️  Port ${PORT} is already in use by another running process.`);
+    console.error(`   To free port ${PORT}, run in terminal: taskkill /F /IM node.exe`);
+    console.error(`   Then re-run: node server.js\n`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+  }
 });
